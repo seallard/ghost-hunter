@@ -1,0 +1,61 @@
+import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { attachUploadedFile, getApplicationOwner } from "@/lib/applications";
+import { buildObjectKey, deleteObject, uploadObject } from "@/lib/storage";
+
+const KindSchema = z.enum(["resume", "cover-letter"]);
+const MAX_BYTES = 10 * 1024 * 1024;
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId } = await auth();
+  if (!userId)
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+
+  const { id: applicationId } = await params;
+  const url = new URL(req.url);
+  const kindParse = KindSchema.safeParse(url.searchParams.get("kind"));
+  if (!kindParse.success)
+    return NextResponse.json({ error: "invalid kind" }, { status: 400 });
+  const kind = kindParse.data;
+
+  const owner = await getApplicationOwner(applicationId);
+  if (owner !== userId)
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+
+  const form = await req.formData();
+  const file = form.get("file");
+  if (!(file instanceof File))
+    return NextResponse.json({ error: "missing file" }, { status: 400 });
+  if (file.type !== "application/pdf")
+    return NextResponse.json({ error: "must be PDF" }, { status: 400 });
+  if (file.size > MAX_BYTES)
+    return NextResponse.json({ error: "too large" }, { status: 413 });
+
+  const key = buildObjectKey(userId, applicationId, kind);
+  const buf = Buffer.from(await file.arrayBuffer());
+  await uploadObject(key, buf, file.type);
+
+  const result = await attachUploadedFile(
+    userId,
+    applicationId,
+    kind,
+    key,
+    file.size,
+    file.type,
+  );
+  if (!result) {
+    await deleteObject(key).catch(() => {});
+    return NextResponse.json({ error: "not found" }, { status: 404 });
+  }
+  if (result.previousKey) {
+    await deleteObject(result.previousKey).catch(() => {});
+  }
+
+  revalidatePath("/");
+  return NextResponse.json({ ok: true });
+}

@@ -1,7 +1,14 @@
 // Auth invariant: every query against `applications` MUST filter by `user_id`.
 
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { applicationStatus } from "./status";
 
 export const applications = pgTable(
@@ -17,6 +24,12 @@ export const applications = pgTable(
     status: applicationStatus("status").notNull(),
     resumeText: text("resume_text"),
     coverLetterText: text("cover_letter_text"),
+    resumeObjectKey: text("resume_object_key"),
+    resumeSizeBytes: integer("resume_size_bytes"),
+    resumeMime: text("resume_mime"),
+    coverLetterObjectKey: text("cover_letter_object_key"),
+    coverLetterSizeBytes: integer("cover_letter_size_bytes"),
+    coverLetterMime: text("cover_letter_mime"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

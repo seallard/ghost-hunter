@@ -1,10 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
+  attachUploadedFile,
   changeApplicationStatus,
+  clearUploadedFile,
   createApplication,
   deleteApplication,
   getApplicationEvents,
+  getApplicationOwner,
+  getAttachmentKey,
   getEventsForApplications,
   listApplications,
   updateApplicationFields,
@@ -299,5 +303,153 @@ describe("deleteApplication", () => {
     });
     expect(await deleteApplication("user_b", a.id)).toBe(false);
     expect(await listApplications("user_a")).toHaveLength(1);
+  });
+});
+
+describe("getApplicationOwner", () => {
+  it("returns the userId for an existing application", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    expect(await getApplicationOwner(a.id)).toBe("user_a");
+  });
+
+  it("returns null for a missing application", async () => {
+    expect(
+      await getApplicationOwner("00000000-0000-0000-0000-000000000000"),
+    ).toBeNull();
+  });
+});
+
+describe("attachUploadedFile", () => {
+  it("writes object key/size/mime on the right kind for the given user", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    const result = await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "key123",
+      1234,
+      "application/pdf",
+    );
+    expect(result).toEqual({ previousKey: null });
+
+    const [row] = await listApplications("user_a");
+    expect(row.resumeObjectKey).toBe("key123");
+    expect(row.resumeSizeBytes).toBe(1234);
+    expect(row.resumeMime).toBe("application/pdf");
+    expect(row.coverLetterObjectKey).toBeNull();
+  });
+
+  it("returns the previous key when replacing an existing upload", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "old-key",
+      100,
+      "application/pdf",
+    );
+    const result = await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "new-key",
+      200,
+      "application/pdf",
+    );
+    expect(result?.previousKey).toBe("old-key");
+  });
+
+  it("refuses to attach to an application owned by another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    expect(
+      await attachUploadedFile(
+        "user_b",
+        a.id,
+        "resume",
+        "key",
+        1,
+        "application/pdf",
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("clearUploadedFile", () => {
+  it("clears the metadata and returns the previous key", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "key123",
+      1234,
+      "application/pdf",
+    );
+    const result = await clearUploadedFile("user_a", a.id, "resume");
+    expect(result?.previousKey).toBe("key123");
+
+    const [row] = await listApplications("user_a");
+    expect(row.resumeObjectKey).toBeNull();
+    expect(row.resumeSizeBytes).toBeNull();
+    expect(row.resumeMime).toBeNull();
+  });
+
+  it("refuses to clear an application owned by another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    expect(await clearUploadedFile("user_b", a.id, "resume")).toBeNull();
+  });
+});
+
+describe("getAttachmentKey", () => {
+  it("returns the resume key for the owning user", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "rk",
+      1,
+      "application/pdf",
+    );
+    expect(await getAttachmentKey("user_a", a.id, "resume")).toBe("rk");
+    expect(await getAttachmentKey("user_a", a.id, "cover-letter")).toBeNull();
+  });
+
+  it("refuses to return a key for another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await attachUploadedFile(
+      "user_a",
+      a.id,
+      "resume",
+      "rk",
+      1,
+      "application/pdf",
+    );
+    expect(await getAttachmentKey("user_b", a.id, "resume")).toBeNull();
   });
 });

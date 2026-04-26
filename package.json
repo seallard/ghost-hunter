@@ -29,6 +29,8 @@
     ]
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1037.0",
+    "@aws-sdk/s3-request-presigner": "^3.1037.0",
     "@base-ui/react": "^1.4.1",
     "@clerk/nextjs": "^7.2.7",
     "class-variance-authority": "^0.7.1",

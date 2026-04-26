@@ -152,6 +152,128 @@ export async function deleteApplication(
   return deleted.length > 0;
 }
 
+export async function getApplicationOwner(
+  applicationId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ userId: applications.userId })
+    .from(applications)
+    .where(eq(applications.id, applicationId));
+  return row?.userId ?? null;
+}
+
+export async function getAttachmentKey(
+  userId: string,
+  applicationId: string,
+  kind: "resume" | "cover-letter",
+): Promise<string | null> {
+  const [row] = await db
+    .select({
+      key:
+        kind === "resume"
+          ? applications.resumeObjectKey
+          : applications.coverLetterObjectKey,
+    })
+    .from(applications)
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    );
+  return row?.key ?? null;
+}
+
+export async function attachUploadedFile(
+  userId: string,
+  applicationId: string,
+  kind: "resume" | "cover-letter",
+  key: string,
+  size: number,
+  mime: string,
+): Promise<{ previousKey: string | null } | null> {
+  const fields =
+    kind === "resume"
+      ? { resumeObjectKey: key, resumeSizeBytes: size, resumeMime: mime }
+      : {
+          coverLetterObjectKey: key,
+          coverLetterSizeBytes: size,
+          coverLetterMime: mime,
+        };
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        key:
+          kind === "resume"
+            ? applications.resumeObjectKey
+            : applications.coverLetterObjectKey,
+      })
+      .from(applications)
+      .where(
+        and(
+          eq(applications.id, applicationId),
+          eq(applications.userId, userId),
+        ),
+      );
+    if (!existing) return null;
+
+    await tx
+      .update(applications)
+      .set({ ...fields, updatedAt: new Date() })
+      .where(
+        and(
+          eq(applications.id, applicationId),
+          eq(applications.userId, userId),
+        ),
+      );
+
+    return { previousKey: existing.key ?? null };
+  });
+}
+
+export async function clearUploadedFile(
+  userId: string,
+  applicationId: string,
+  kind: "resume" | "cover-letter",
+): Promise<{ previousKey: string | null } | null> {
+  const fields =
+    kind === "resume"
+      ? { resumeObjectKey: null, resumeSizeBytes: null, resumeMime: null }
+      : {
+          coverLetterObjectKey: null,
+          coverLetterSizeBytes: null,
+          coverLetterMime: null,
+        };
+
+  return db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({
+        key:
+          kind === "resume"
+            ? applications.resumeObjectKey
+            : applications.coverLetterObjectKey,
+      })
+      .from(applications)
+      .where(
+        and(
+          eq(applications.id, applicationId),
+          eq(applications.userId, userId),
+        ),
+      );
+    if (!existing) return null;
+
+    await tx
+      .update(applications)
+      .set({ ...fields, updatedAt: new Date() })
+      .where(
+        and(
+          eq(applications.id, applicationId),
+          eq(applications.userId, userId),
+        ),
+      );
+
+    return { previousKey: existing.key ?? null };
+  });
+}
+
 export async function updateEventNote(
   userId: string,
   eventId: string,

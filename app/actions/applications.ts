@@ -5,12 +5,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   changeApplicationStatus,
+  clearUploadedFile,
   createApplication,
   deleteApplication,
   updateApplicationFields,
   updateEventNote,
 } from "@/lib/applications";
 import { applicationStatus } from "@/lib/db/schema";
+import { deleteObject } from "@/lib/storage";
 
 const NewApplicationSchema = z.object({
   companyName: z.string().trim().min(1).max(200),
@@ -142,6 +144,36 @@ export async function deleteApplicationAction(
 
   const ok = await deleteApplication(userId, parsed.data.applicationId);
   if (!ok) return { ok: false, error: "not found" };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const ClearUploadSchema = z.object({
+  applicationId: z.string().uuid(),
+  kind: z.enum(["resume", "cover-letter"]),
+});
+
+export type ClearUploadResult = { ok: true } | { ok: false; error: string };
+
+export async function clearUploadedFileAction(
+  input: z.input<typeof ClearUploadSchema>,
+): Promise<ClearUploadResult> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("unauthenticated");
+
+  const parsed = ClearUploadSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+
+  const result = await clearUploadedFile(
+    userId,
+    parsed.data.applicationId,
+    parsed.data.kind,
+  );
+  if (!result) return { ok: false, error: "not found" };
+  if (result.previousKey) {
+    await deleteObject(result.previousKey).catch(() => {});
+  }
 
   revalidatePath("/");
   return { ok: true };
