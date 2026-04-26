@@ -15,8 +15,18 @@
 │   ├── page.tsx                  # protected dashboard
 │   └── globals.css               # Tailwind v4 + shadcn theme tokens
 ├── components/ui/                # shadcn/ui components (owned in-repo)
-├── lib/                          # utils; will hold DB client once Drizzle lands
+├── lib/
+│   ├── db/
+│   │   ├── schema/               # applications, application_events, applicationStatus enum
+│   │   ├── index.ts              # Drizzle client (cached on globalThis in dev)
+│   │   └── migrate.ts            # release-step migrator (runs drizzle/ migrations)
+│   └── utils.ts
+├── drizzle/                      # generated SQL migrations + meta (committed)
+├── .husky/                       # git hooks (pre-commit runs lint-staged)
 ├── proxy.ts                      # auth gate — Next 16's renamed middleware.ts
+├── drizzle.config.ts             # drizzle-kit config
+├── docker-compose.yml            # local Postgres
+├── railway.toml                  # Railway deploy config (preDeployCommand runs migrations)
 ├── components.json               # shadcn config
 └── AGENTS.md                     # Next 16 breaking-changes warning (auto-generated)
 ```
@@ -36,25 +46,37 @@
 
 ## Development
 
-Prereqs: Node 20+, pnpm.
+Prereqs: Node 20+, pnpm, Docker.
 
 ```bash
 cp .env.example .env.local      # then paste Clerk keys from dashboard.clerk.com
-pnpm install
+pnpm install                     # also installs the husky pre-commit hook
+docker compose up -d             # Postgres on localhost:5432
+pnpm db:migrate                  # apply migrations to local db
 pnpm dev                         # http://localhost:3000
 ```
 
 `pnpm build` produces a production build; `pnpm start` serves it. `pnpm lint` for ESLint.
 
+### Database
+
+- `pnpm db:generate` — create a new migration from schema changes (commit the generated SQL).
+- `pnpm db:migrate` — apply pending migrations to whatever `DATABASE_URL` points at.
+- `pnpm db:studio` — browse the DB at https://local.drizzle.studio.
+
+In Railway, the Postgres plugin injects `DATABASE_URL` into the Next.js service via a reference variable (`${{ Postgres.DATABASE_URL }}`). The `preDeployCommand` in `railway.toml` runs `pnpm db:migrate` before traffic switches.
+
+### Formatting
+
+Prettier runs automatically on staged files via the husky pre-commit hook (configured in `package.json` under `lint-staged`). To format everything manually: `pnpm format`. To check without writing: `pnpm format:check`.
+
 ## Commit and PR Conventions
 
 - Use **conventional commits** for all commit messages (e.g., `feat:`, `fix:`, `refactor:`, `docs:`, `test:`)
 
-
 ## Releasing
 
 Pushes to main automatically trigger a Railway deploy.
-
 
 ## Important Notes
 

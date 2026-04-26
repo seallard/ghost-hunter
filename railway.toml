@@ -1,0 +1,4 @@
+[deploy]
+preDeployCommand = "pnpm db:migrate"
+startCommand = "pnpm start"
+restartPolicyType = "on_failure"
