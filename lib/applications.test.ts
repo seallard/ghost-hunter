@@ -1,5 +1,12 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { createApplication, listApplications } from "./applications";
+import {
+  changeApplicationStatus,
+  createApplication,
+  listApplications,
+} from "./applications";
+import { db } from "./db";
+import { applicationEvents } from "./db/schema";
 
 describe("listApplications", () => {
   it("returns only rows for the given userId (auth invariant)", async () => {
@@ -47,5 +54,63 @@ describe("createApplication", () => {
       role: "X",
     });
     expect(row.status).toBe("applied");
+  });
+});
+
+describe("changeApplicationStatus", () => {
+  it("updates status and inserts an event atomically", async () => {
+    const app = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+
+    const updated = await changeApplicationStatus(
+      "user_a",
+      app.id,
+      "screening",
+    );
+    expect(updated?.status).toBe("screening");
+
+    const events = await db
+      .select()
+      .from(applicationEvents)
+      .where(eq(applicationEvents.applicationId, app.id));
+    expect(events).toHaveLength(1);
+    expect(events[0].status).toBe("screening");
+    expect(events[0].userId).toBe("user_a");
+  });
+
+  it("refuses to update an application owned by another user (auth invariant)", async () => {
+    const app = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+
+    const result = await changeApplicationStatus("user_b", app.id, "screening");
+    expect(result).toBeNull();
+
+    const [unchanged] = await listApplications("user_a");
+    expect(unchanged.status).toBe("applied");
+
+    const events = await db.select().from(applicationEvents);
+    expect(events).toHaveLength(0);
+  });
+
+  it("listApplications.lastActivityAt reflects the latest event", async () => {
+    const app = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+
+    const [before] = await listApplications("user_a");
+    expect(before.lastActivityAt.getTime()).toBe(before.createdAt.getTime());
+
+    await new Promise((r) => setTimeout(r, 50));
+    await changeApplicationStatus("user_a", app.id, "screening");
+
+    const [after] = await listApplications("user_a");
+    expect(after.lastActivityAt.getTime()).toBeGreaterThan(
+      after.createdAt.getTime(),
+    );
   });
 });

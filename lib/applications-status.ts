@@ -1,6 +1,17 @@
 import type { Application } from "@/lib/db/schema";
 
-type Status = Application["status"];
+export type Status = Application["status"];
+
+export const STATUSES: readonly Status[] = [
+  "applied",
+  "screening",
+  "interviewing",
+  "offer",
+  "accepted",
+  "rejected",
+  "withdrawn",
+  "ghosted",
+];
 
 export const STATUS_LABELS: Record<Status, string> = {
   applied: "Applied",

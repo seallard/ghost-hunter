@@ -4,6 +4,12 @@ import { useRef, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -14,18 +20,39 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RelativeTime } from "@/components/relative-time";
-import type { Application } from "@/lib/db/schema";
-import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/applications-status";
-import { createApplicationAction } from "@/app/actions/applications";
+import type { ApplicationWithActivity } from "@/lib/applications";
+import {
+  STATUSES,
+  STATUS_LABELS,
+  STATUS_VARIANTS,
+  type Status,
+} from "@/lib/applications-status";
+import {
+  changeApplicationStatusAction,
+  createApplicationAction,
+} from "@/app/actions/applications";
 
 const COLS = 4;
 
 export function ApplicationsTable({
   applications,
 }: {
-  applications: Application[];
+  applications: ApplicationWithActivity[];
 }) {
   const [adding, setAdding] = useState(false);
+  const [, startTransition] = useTransition();
+
+  function handleStatusChange(applicationId: string, newStatus: Status) {
+    startTransition(async () => {
+      const result = await changeApplicationStatusAction(
+        applicationId,
+        newStatus,
+      );
+      if (!result.ok) {
+        console.error("status change failed", result.error);
+      }
+    });
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -35,7 +62,7 @@ export function ApplicationsTable({
             <TableHead className="w-[35%]">Company</TableHead>
             <TableHead className="w-[30%]">Role</TableHead>
             <TableHead className="w-[15%]">Status</TableHead>
-            <TableHead className="w-[20%]">Created</TableHead>
+            <TableHead className="w-[20%]">Last update</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -60,12 +87,27 @@ export function ApplicationsTable({
               <TableCell className="font-medium">{app.companyName}</TableCell>
               <TableCell>{app.role}</TableCell>
               <TableCell>
-                <Badge variant={STATUS_VARIANTS[app.status]}>
-                  {STATUS_LABELS[app.status]}
-                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="cursor-pointer">
+                    <Badge variant={STATUS_VARIANTS[app.status]}>
+                      {STATUS_LABELS[app.status]}
+                    </Badge>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {STATUSES.map((s) => (
+                      <DropdownMenuItem
+                        key={s}
+                        disabled={s === app.status}
+                        onClick={() => handleStatusChange(app.id, s)}
+                      >
+                        {STATUS_LABELS[s]}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
               <TableCell className="text-muted-foreground">
-                <RelativeTime date={app.createdAt} />
+                <RelativeTime date={app.lastActivityAt} />
               </TableCell>
             </TableRow>
           ))}
