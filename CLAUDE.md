@@ -21,10 +21,12 @@
 │   │   ├── index.ts              # Drizzle client (cached on globalThis in dev)
 │   │   └── migrate.ts            # release-step migrator (runs drizzle/ migrations)
 │   └── utils.ts
+├── tests/setup/                  # Vitest globalSetup + per-test truncate
 ├── drizzle/                      # generated SQL migrations + meta (committed)
 ├── .husky/                       # git hooks (pre-commit runs lint-staged)
 ├── proxy.ts                      # auth gate — Next 16's renamed middleware.ts
 ├── drizzle.config.ts             # drizzle-kit config
+├── vitest.config.ts              # tests run against a *_test database (safety net in tests/setup/global.ts)
 ├── docker-compose.yml            # local Postgres
 ├── railway.toml                  # Railway deploy config (preDeployCommand runs migrations)
 ├── components.json               # shadcn config
@@ -56,7 +58,7 @@ pnpm db:migrate                  # apply migrations to local db
 pnpm dev                         # http://localhost:3000
 ```
 
-`pnpm build` produces a production build; `pnpm start` serves it. `pnpm lint` for ESLint.
+`pnpm build` produces a production build; `pnpm start` serves it. `pnpm lint` for ESLint. `pnpm test` runs the Vitest suite (requires the local Postgres container).
 
 ### Database
 
