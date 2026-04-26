@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   changeApplicationStatus,
   createApplication,
+  getApplicationEvents,
+  getEventsForApplications,
   listApplications,
+  updateApplicationFields,
 } from "./applications";
 import { db } from "./db";
 import { applicationEvents } from "./db/schema";
@@ -112,5 +115,102 @@ describe("changeApplicationStatus", () => {
     expect(after.lastActivityAt.getTime()).toBeGreaterThan(
       after.createdAt.getTime(),
     );
+  });
+});
+
+describe("getApplicationEvents", () => {
+  it("returns only events owned by userId (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+
+    expect(await getApplicationEvents("user_a", a.id)).toHaveLength(1);
+    expect(await getApplicationEvents("user_b", a.id)).toEqual([]);
+  });
+
+  it("orders events by occurredAt desc", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+    await new Promise((r) => setTimeout(r, 50));
+    await changeApplicationStatus("user_a", a.id, "interviewing");
+
+    const events = await getApplicationEvents("user_a", a.id);
+    expect(events.map((e) => e.status)).toEqual(["interviewing", "screening"]);
+  });
+});
+
+describe("getEventsForApplications", () => {
+  it("returns empty map for empty input", async () => {
+    const result = await getEventsForApplications("user_a", []);
+    expect(result.size).toBe(0);
+  });
+
+  it("groups events by applicationId, filtered by userId", async () => {
+    const a1 = await createApplication("user_a", {
+      companyName: "A1",
+      role: "X",
+    });
+    const a2 = await createApplication("user_a", {
+      companyName: "A2",
+      role: "Y",
+    });
+    const b1 = await createApplication("user_b", {
+      companyName: "B1",
+      role: "Z",
+    });
+    await changeApplicationStatus("user_a", a1.id, "screening");
+    await changeApplicationStatus("user_a", a2.id, "rejected");
+    await changeApplicationStatus("user_b", b1.id, "interviewing");
+
+    const result = await getEventsForApplications("user_a", [
+      a1.id,
+      a2.id,
+      b1.id,
+    ]);
+    expect(result.get(a1.id)?.map((e) => e.status)).toEqual(["screening"]);
+    expect(result.get(a2.id)?.map((e) => e.status)).toEqual(["rejected"]);
+    expect(result.has(b1.id)).toBe(false);
+  });
+});
+
+describe("updateApplicationFields", () => {
+  it("updates fields without touching status", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    const updated = await updateApplicationFields("user_a", a.id, {
+      jobDescription: "JD content",
+    });
+    expect(updated?.jobDescription).toBe("JD content");
+    expect(updated?.status).toBe("applied");
+  });
+
+  it("updates resumeText and coverLetterText independently", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await updateApplicationFields("user_a", a.id, { resumeText: "resume" });
+    const updated = await updateApplicationFields("user_a", a.id, {
+      coverLetterText: "cover",
+    });
+    expect(updated?.resumeText).toBe("resume");
+    expect(updated?.coverLetterText).toBe("cover");
+  });
+
+  it("refuses to update an application owned by another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    expect(
+      await updateApplicationFields("user_b", a.id, { jobDescription: "x" }),
+    ).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { Fragment, useRef, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RelativeTime } from "@/components/relative-time";
+import { ApplicationDetail } from "@/components/application-detail";
 import type { ApplicationWithActivity } from "@/lib/applications";
+import type { ApplicationEvent } from "@/lib/db/schema";
 import {
   STATUSES,
   STATUS_LABELS,
@@ -36,10 +38,13 @@ const COLS = 4;
 
 export function ApplicationsTable({
   applications,
+  eventsByApp,
 }: {
   applications: ApplicationWithActivity[];
+  eventsByApp: Map<string, ApplicationEvent[]>;
 }) {
   const [adding, setAdding] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function handleStatusChange(applicationId: string, newStatus: Status) {
@@ -82,35 +87,58 @@ export function ApplicationsTable({
               </TableCell>
             </TableRow>
           )}
-          {applications.map((app) => (
-            <TableRow key={app.id}>
-              <TableCell className="font-medium">{app.companyName}</TableCell>
-              <TableCell>{app.role}</TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger className="cursor-pointer">
-                    <Badge variant={STATUS_VARIANTS[app.status]}>
-                      {STATUS_LABELS[app.status]}
-                    </Badge>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    {STATUSES.map((s) => (
-                      <DropdownMenuItem
-                        key={s}
-                        disabled={s === app.status}
-                        onClick={() => handleStatusChange(app.id, s)}
-                      >
-                        {STATUS_LABELS[s]}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-              <TableCell className="text-muted-foreground">
-                <RelativeTime date={app.lastActivityAt} />
-              </TableCell>
-            </TableRow>
-          ))}
+          {applications.map((app) => {
+            const expanded = expandedId === app.id;
+            return (
+              <Fragment key={app.id}>
+                <TableRow
+                  data-state={expanded ? "selected" : undefined}
+                  className="cursor-pointer"
+                  onClick={() =>
+                    setExpandedId((id) => (id === app.id ? null : app.id))
+                  }
+                >
+                  <TableCell className="font-medium">
+                    {app.companyName}
+                  </TableCell>
+                  <TableCell>{app.role}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="cursor-pointer">
+                        <Badge variant={STATUS_VARIANTS[app.status]}>
+                          {STATUS_LABELS[app.status]}
+                        </Badge>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        {STATUSES.map((s) => (
+                          <DropdownMenuItem
+                            key={s}
+                            disabled={s === app.status}
+                            onClick={() => handleStatusChange(app.id, s)}
+                          >
+                            {STATUS_LABELS[s]}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    <RelativeTime date={app.lastActivityAt} />
+                  </TableCell>
+                </TableRow>
+                {expanded ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell colSpan={COLS} className="p-0">
+                      <ApplicationDetail
+                        application={app}
+                        events={eventsByApp.get(app.id) ?? []}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : null}
+              </Fragment>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

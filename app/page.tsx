@@ -1,12 +1,16 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import { ApplicationsTable } from "@/components/applications-table";
-import { listApplications } from "@/lib/applications";
+import { getEventsForApplications, listApplications } from "@/lib/applications";
 
 export default async function Home() {
   const user = await currentUser();
   if (!user) return null;
   const applications = await listApplications(user.id);
+  const eventsByApp = await getEventsForApplications(
+    user.id,
+    applications.map((a) => a.id),
+  );
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -15,7 +19,10 @@ export default async function Home() {
         <UserButton />
       </header>
       <section className="flex-1 px-6 py-8">
-        <ApplicationsTable applications={applications} />
+        <ApplicationsTable
+          applications={applications}
+          eventsByApp={eventsByApp}
+        />
       </section>
     </main>
   );
