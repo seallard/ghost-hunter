@@ -1,1 +1,8 @@
+if [ -s "$HOME/.nvm/nvm.sh" ]; then
+  . "$HOME/.nvm/nvm.sh" --no-use
+  nvm use --silent || {
+    echo "Node version from .nvmrc not installed. Run 'nvm install' to fix." >&2
+    exit 1
+  }
+fi
 pnpm lint-staged
