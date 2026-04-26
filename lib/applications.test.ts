@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   changeApplicationStatus,
   createApplication,
+  deleteApplication,
   getApplicationEvents,
   getEventsForApplications,
   listApplications,
@@ -255,5 +256,48 @@ describe("updateEventNote", () => {
 
     const cleared = await updateEventNote("user_a", event.id, null);
     expect(cleared?.note).toBeNull();
+  });
+});
+
+describe("updateApplicationFields companyName/role", () => {
+  it("updates companyName and role", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    const updated = await updateApplicationFields("user_a", a.id, {
+      companyName: "Acmee",
+      role: "SWE II",
+    });
+    expect(updated?.companyName).toBe("Acmee");
+    expect(updated?.role).toBe("SWE II");
+  });
+});
+
+describe("deleteApplication", () => {
+  it("deletes an owned application and cascades events", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+
+    expect(await deleteApplication("user_a", a.id)).toBe(true);
+    expect(await listApplications("user_a")).toEqual([]);
+
+    const events = await db
+      .select()
+      .from(applicationEvents)
+      .where(eq(applicationEvents.applicationId, a.id));
+    expect(events).toEqual([]);
+  });
+
+  it("refuses to delete an application owned by another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    expect(await deleteApplication("user_b", a.id)).toBe(false);
+    expect(await listApplications("user_a")).toHaveLength(1);
   });
 });

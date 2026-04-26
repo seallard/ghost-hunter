@@ -1,9 +1,20 @@
 "use client";
 
 import { Fragment, useRef, useState, useTransition } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,9 +43,13 @@ import {
 import {
   changeApplicationStatusAction,
   createApplicationAction,
+  deleteApplicationAction,
+  updateApplicationFieldsAction,
 } from "@/app/actions/applications";
 
 const COLS = 4;
+
+type EditableField = "companyName" | "role";
 
 export function ApplicationsTable({
   applications,
@@ -45,6 +60,10 @@ export function ApplicationsTable({
 }) {
   const [adding, setAdding] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{
+    id: string;
+    field: EditableField;
+  } | null>(null);
   const [, startTransition] = useTransition();
 
   function handleStatusChange(applicationId: string, newStatus: Status) {
@@ -55,6 +74,36 @@ export function ApplicationsTable({
       );
       if (!result.ok) {
         console.error("status change failed", result.error);
+      }
+    });
+  }
+
+  function handleFieldEdit(
+    applicationId: string,
+    field: EditableField,
+    value: string,
+    original: string,
+  ) {
+    setEditing(null);
+    const trimmed = value.trim();
+    if (trimmed === "" || trimmed === original) return;
+
+    startTransition(async () => {
+      const result = await updateApplicationFieldsAction({
+        applicationId,
+        [field]: trimmed,
+      });
+      if (!result.ok) {
+        console.error("update field failed", result.error);
+      }
+    });
+  }
+
+  function handleDelete(applicationId: string) {
+    startTransition(async () => {
+      const result = await deleteApplicationAction(applicationId);
+      if (!result.ok) {
+        console.error("delete failed", result.error);
       }
     });
   }
@@ -89,19 +138,65 @@ export function ApplicationsTable({
           )}
           {applications.map((app) => {
             const expanded = expandedId === app.id;
+            const isEditingCompany =
+              editing?.id === app.id && editing.field === "companyName";
+            const isEditingRole =
+              editing?.id === app.id && editing.field === "role";
             return (
               <Fragment key={app.id}>
                 <TableRow
                   data-state={expanded ? "selected" : undefined}
-                  className="cursor-pointer"
+                  className="group cursor-pointer"
                   onClick={() =>
                     setExpandedId((id) => (id === app.id ? null : app.id))
                   }
                 >
-                  <TableCell className="font-medium">
-                    {app.companyName}
+                  <TableCell
+                    className="font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isEditingCompany) {
+                        setEditing({ id: app.id, field: "companyName" });
+                      }
+                    }}
+                  >
+                    {isEditingCompany ? (
+                      <InlineEditInput
+                        defaultValue={app.companyName}
+                        onCommit={(value) =>
+                          handleFieldEdit(
+                            app.id,
+                            "companyName",
+                            value,
+                            app.companyName,
+                          )
+                        }
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : (
+                      app.companyName
+                    )}
                   </TableCell>
-                  <TableCell>{app.role}</TableCell>
+                  <TableCell
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!isEditingRole) {
+                        setEditing({ id: app.id, field: "role" });
+                      }
+                    }}
+                  >
+                    {isEditingRole ? (
+                      <InlineEditInput
+                        defaultValue={app.role}
+                        onCommit={(value) =>
+                          handleFieldEdit(app.id, "role", value, app.role)
+                        }
+                        onCancel={() => setEditing(null)}
+                      />
+                    ) : (
+                      app.role
+                    )}
+                  </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="cursor-pointer">
@@ -123,7 +218,13 @@ export function ApplicationsTable({
                     </DropdownMenu>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    <RelativeTime date={app.lastActivityAt} />
+                    <div className="flex items-center justify-between gap-2">
+                      <RelativeTime date={app.lastActivityAt} />
+                      <DeleteButton
+                        company={app.companyName}
+                        onConfirm={() => handleDelete(app.id)}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
                 {expanded ? (
@@ -142,6 +243,81 @@ export function ApplicationsTable({
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function InlineEditInput({
+  defaultValue,
+  onCommit,
+  onCancel,
+}: {
+  defaultValue: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <Input
+      autoFocus
+      defaultValue={defaultValue}
+      onBlur={(e) => onCommit(e.currentTarget.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onCommit(e.currentTarget.value);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onCancel();
+        }
+      }}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+function DeleteButton({
+  company,
+  onConfirm,
+}: {
+  company: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={(props) => (
+          <button
+            type="button"
+            {...props}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onClick?.(e);
+            }}
+            aria-label={`Delete ${company}`}
+            className="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 data-popup-open:opacity-100"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        )}
+      />
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete &ldquo;{company}&rdquo;?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This cannot be undone. The application and its event history will be
+            permanently removed.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={onConfirm}
+            className="bg-destructive/10 text-destructive hover:bg-destructive/20"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 

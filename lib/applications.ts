@@ -122,6 +122,8 @@ export async function updateApplicationFields(
   userId: string,
   applicationId: string,
   fields: {
+    companyName?: string;
+    role?: string;
     jobDescription?: string | null;
     resumeText?: string | null;
     coverLetterText?: string | null;
@@ -135,6 +137,19 @@ export async function updateApplicationFields(
     )
     .returning();
   return updated ?? null;
+}
+
+export async function deleteApplication(
+  userId: string,
+  applicationId: string,
+): Promise<boolean> {
+  const deleted = await db
+    .delete(applications)
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
+    .returning({ id: applications.id });
+  return deleted.length > 0;
 }
 
 export async function updateEventNote(

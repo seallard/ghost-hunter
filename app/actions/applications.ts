@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   changeApplicationStatus,
   createApplication,
+  deleteApplication,
   updateApplicationFields,
   updateEventNote,
 } from "@/lib/applications";
@@ -69,6 +70,8 @@ export async function changeApplicationStatusAction(
 
 const UpdateFieldsSchema = z.object({
   applicationId: z.string().uuid(),
+  companyName: z.string().trim().min(1).max(200).optional(),
+  role: z.string().trim().min(1).max(200).optional(),
   jobDescription: z.string().max(50_000).nullable().optional(),
   resumeText: z.string().max(50_000).nullable().optional(),
   coverLetterText: z.string().max(50_000).nullable().optional(),
@@ -115,6 +118,30 @@ export async function updateEventNoteAction(
     parsed.data.note,
   );
   if (!updated) return { ok: false, error: "not found" };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const DeleteApplicationSchema = z.object({
+  applicationId: z.string().uuid(),
+});
+
+export type DeleteApplicationResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function deleteApplicationAction(
+  applicationId: string,
+): Promise<DeleteApplicationResult> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("unauthenticated");
+
+  const parsed = DeleteApplicationSchema.safeParse({ applicationId });
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+
+  const ok = await deleteApplication(userId, parsed.data.applicationId);
+  if (!ok) return { ok: false, error: "not found" };
 
   revalidatePath("/");
   return { ok: true };
