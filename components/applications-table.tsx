@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,9 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { RelativeTime } from "@/components/relative-time";
 import type { Application } from "@/lib/db/schema";
-import { relativeTime } from "@/lib/relative-time";
+import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/applications-status";
 import { createApplicationAction } from "@/app/actions/applications";
+
+const COLS = 4;
 
 export function ApplicationsTable({
   applications,
@@ -28,8 +32,9 @@ export function ApplicationsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[40%]">Company</TableHead>
-            <TableHead className="w-[40%]">Role</TableHead>
+            <TableHead className="w-[35%]">Company</TableHead>
+            <TableHead className="w-[30%]">Role</TableHead>
+            <TableHead className="w-[15%]">Status</TableHead>
             <TableHead className="w-[20%]">Created</TableHead>
           </TableRow>
         </TableHeader>
@@ -38,7 +43,7 @@ export function ApplicationsTable({
             <NewRow onDone={() => setAdding(false)} />
           ) : (
             <TableRow>
-              <TableCell colSpan={3} className="p-0">
+              <TableCell colSpan={COLS} className="p-0">
                 <Button
                   variant="ghost"
                   className="text-muted-foreground hover:text-foreground h-10 w-full justify-start rounded-none px-2 font-normal"
@@ -54,8 +59,13 @@ export function ApplicationsTable({
             <TableRow key={app.id}>
               <TableCell className="font-medium">{app.companyName}</TableCell>
               <TableCell>{app.role}</TableCell>
+              <TableCell>
+                <Badge variant={STATUS_VARIANTS[app.status]}>
+                  {STATUS_LABELS[app.status]}
+                </Badge>
+              </TableCell>
               <TableCell className="text-muted-foreground">
-                {relativeTime(app.createdAt)}
+                <RelativeTime date={app.createdAt} />
               </TableCell>
             </TableRow>
           ))}
@@ -88,7 +98,7 @@ function NewRow({ onDone }: { onDone: () => void }) {
 
   return (
     <TableRow>
-      <TableCell colSpan={3} className="p-0">
+      <TableCell colSpan={COLS} className="p-0">
         <form
           ref={formRef}
           action={submit}
@@ -117,14 +127,19 @@ function NewRow({ onDone }: { onDone: () => void }) {
             placeholder="Company"
             autoFocus
             disabled={pending}
-            className="w-[40%]"
+            className="w-[35%]"
           />
           <Input
             name="role"
             placeholder="Role"
             disabled={pending}
-            className="w-[40%]"
+            className="w-[30%]"
           />
+          <span className="w-[15%]">
+            <Badge variant={STATUS_VARIANTS.applied}>
+              {STATUS_LABELS.applied}
+            </Badge>
+          </span>
           <span className="text-muted-foreground w-[20%] text-sm">
             {pending ? "Saving…" : error ? error : "just now"}
           </span>
