@@ -1,8 +1,12 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
+import { ApplicationsTable } from "@/components/applications-table";
+import { listApplications } from "@/lib/applications";
 
 export default async function Home() {
   const user = await currentUser();
+  if (!user) return null;
+  const applications = await listApplications(user.id);
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -10,11 +14,8 @@ export default async function Home() {
         <h1 className="text-lg font-semibold tracking-tight">ghost-hunter</h1>
         <UserButton />
       </header>
-      <section className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-        <h2 className="text-2xl font-semibold tracking-tight">
-          Hi {user?.firstName ?? "there"}
-        </h2>
-        <p className="text-muted-foreground">No applications yet.</p>
+      <section className="flex-1 px-6 py-8">
+        <ApplicationsTable applications={applications} />
       </section>
     </main>
   );

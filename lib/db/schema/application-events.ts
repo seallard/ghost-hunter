@@ -5,7 +5,7 @@
 import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { applications } from "./applications";
-import { applicationStatus } from "./index";
+import { applicationStatus } from "./status";
 
 export const applicationEvents = pgTable(
   "application_events",

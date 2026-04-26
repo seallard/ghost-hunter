@@ -2,7 +2,7 @@
 
 import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { applicationStatus } from "./index";
+import { applicationStatus } from "./status";
 
 export const applications = pgTable(
   "applications",
@@ -13,7 +13,7 @@ export const applications = pgTable(
     userId: text("user_id").notNull(),
     companyName: text("company_name").notNull(),
     role: text("role").notNull(),
-    jobDescription: text("job_description").notNull(),
+    jobDescription: text("job_description"),
     status: applicationStatus("status").notNull(),
     resumeText: text("resume_text"),
     coverLetterText: text("cover_letter_text"),
