@@ -136,3 +136,21 @@ export async function updateApplicationFields(
     .returning();
   return updated ?? null;
 }
+
+export async function updateEventNote(
+  userId: string,
+  eventId: string,
+  note: string | null,
+): Promise<ApplicationEvent | null> {
+  const [updated] = await db
+    .update(applicationEvents)
+    .set({ note })
+    .where(
+      and(
+        eq(applicationEvents.id, eventId),
+        eq(applicationEvents.userId, userId),
+      ),
+    )
+    .returning();
+  return updated ?? null;
+}

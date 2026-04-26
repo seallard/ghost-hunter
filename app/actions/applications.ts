@@ -7,6 +7,7 @@ import {
   changeApplicationStatus,
   createApplication,
   updateApplicationFields,
+  updateEventNote,
 } from "@/lib/applications";
 import { applicationStatus } from "@/lib/db/schema";
 
@@ -86,6 +87,33 @@ export async function updateApplicationFieldsAction(
 
   const { applicationId, ...fields } = parsed.data;
   const updated = await updateApplicationFields(userId, applicationId, fields);
+  if (!updated) return { ok: false, error: "not found" };
+
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const UpdateNoteSchema = z.object({
+  eventId: z.string().uuid(),
+  note: z.string().max(2_000).nullable(),
+});
+
+export type UpdateNoteResult = { ok: true } | { ok: false; error: string };
+
+export async function updateEventNoteAction(
+  input: z.input<typeof UpdateNoteSchema>,
+): Promise<UpdateNoteResult> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("unauthenticated");
+
+  const parsed = UpdateNoteSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid input" };
+
+  const updated = await updateEventNote(
+    userId,
+    parsed.data.eventId,
+    parsed.data.note,
+  );
   if (!updated) return { ok: false, error: "not found" };
 
   revalidatePath("/");

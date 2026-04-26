@@ -7,6 +7,7 @@ import {
   getEventsForApplications,
   listApplications,
   updateApplicationFields,
+  updateEventNote,
 } from "./applications";
 import { db } from "./db";
 import { applicationEvents } from "./db/schema";
@@ -212,5 +213,47 @@ describe("updateApplicationFields", () => {
     expect(
       await updateApplicationFields("user_b", a.id, { jobDescription: "x" }),
     ).toBeNull();
+  });
+});
+
+describe("updateEventNote", () => {
+  it("updates the note for an owned event", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+    const [event] = await getApplicationEvents("user_a", a.id);
+
+    const updated = await updateEventNote(
+      "user_a",
+      event.id,
+      "phone screen with Sarah",
+    );
+    expect(updated?.note).toBe("phone screen with Sarah");
+  });
+
+  it("refuses to update an event owned by another user (auth invariant)", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+    const [event] = await getApplicationEvents("user_a", a.id);
+
+    expect(await updateEventNote("user_b", event.id, "x")).toBeNull();
+  });
+
+  it("clears the note when passed null", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "screening");
+    const [event] = await getApplicationEvents("user_a", a.id);
+    await updateEventNote("user_a", event.id, "x");
+
+    const cleared = await updateEventNote("user_a", event.id, null);
+    expect(cleared?.note).toBeNull();
   });
 });
