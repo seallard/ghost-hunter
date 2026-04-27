@@ -1,13 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { getAttachmentKey } from "@/lib/applications";
 import { getDownloadUrl } from "@/lib/storage";
 
-const KindSchema = z.enum(["resume", "cover-letter"]);
-
 export async function GET(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { userId } = await auth();
@@ -15,12 +12,8 @@ export async function GET(
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const { id: applicationId } = await params;
-  const url = new URL(req.url);
-  const kindParse = KindSchema.safeParse(url.searchParams.get("kind"));
-  if (!kindParse.success)
-    return NextResponse.json({ error: "invalid kind" }, { status: 400 });
 
-  const key = await getAttachmentKey(userId, applicationId, kindParse.data);
+  const key = await getAttachmentKey(userId, applicationId);
   if (!key) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const signed = await getDownloadUrl(key);

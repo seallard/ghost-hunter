@@ -75,7 +75,6 @@ const UpdateFieldsSchema = z.object({
   companyName: z.string().trim().min(1).max(200).optional(),
   role: z.string().trim().min(1).max(200).optional(),
   jobDescription: z.string().max(50_000).nullable().optional(),
-  resumeText: z.string().max(50_000).nullable().optional(),
   coverLetterText: z.string().max(50_000).nullable().optional(),
 });
 
@@ -151,7 +150,6 @@ export async function deleteApplicationAction(
 
 const ClearUploadSchema = z.object({
   applicationId: z.string().uuid(),
-  kind: z.enum(["resume", "cover-letter"]),
 });
 
 export type ClearUploadResult = { ok: true } | { ok: false; error: string };
@@ -165,11 +163,7 @@ export async function clearUploadedFileAction(
   const parsed = ClearUploadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
 
-  const result = await clearUploadedFile(
-    userId,
-    parsed.data.applicationId,
-    parsed.data.kind,
-  );
+  const result = await clearUploadedFile(userId, parsed.data.applicationId);
   if (!result) return { ok: false, error: "not found" };
   if (result.previousKey) {
     await deleteObject(result.previousKey).catch(() => {});

@@ -6,8 +6,6 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export type AttachmentKind = "resume" | "cover-letter";
-
 let _client: S3Client | null = null;
 
 function getClient(): S3Client {
@@ -30,13 +28,9 @@ function getBucket(): string {
   return bucket;
 }
 
-export function buildObjectKey(
-  userId: string,
-  applicationId: string,
-  kind: AttachmentKind,
-): string {
+export function buildObjectKey(userId: string, applicationId: string): string {
   const id = crypto.randomUUID();
-  return `users/${userId}/applications/${applicationId}/${kind}/${id}.pdf`;
+  return `users/${userId}/applications/${applicationId}/cover-letter/${id}.pdf`;
 }
 
 export async function uploadObject(

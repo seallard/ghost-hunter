@@ -125,7 +125,6 @@ export async function updateApplicationFields(
     companyName?: string;
     role?: string;
     jobDescription?: string | null;
-    resumeText?: string | null;
     coverLetterText?: string | null;
   },
 ): Promise<Application | null> {
@@ -165,15 +164,9 @@ export async function getApplicationOwner(
 export async function getAttachmentKey(
   userId: string,
   applicationId: string,
-  kind: "resume" | "cover-letter",
 ): Promise<string | null> {
   const [row] = await db
-    .select({
-      key:
-        kind === "resume"
-          ? applications.resumeObjectKey
-          : applications.coverLetterObjectKey,
-    })
+    .select({ key: applications.coverLetterObjectKey })
     .from(applications)
     .where(
       and(eq(applications.id, applicationId), eq(applications.userId, userId)),
@@ -184,28 +177,13 @@ export async function getAttachmentKey(
 export async function attachUploadedFile(
   userId: string,
   applicationId: string,
-  kind: "resume" | "cover-letter",
   key: string,
   size: number,
   mime: string,
 ): Promise<{ previousKey: string | null } | null> {
-  const fields =
-    kind === "resume"
-      ? { resumeObjectKey: key, resumeSizeBytes: size, resumeMime: mime }
-      : {
-          coverLetterObjectKey: key,
-          coverLetterSizeBytes: size,
-          coverLetterMime: mime,
-        };
-
   return db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({
-        key:
-          kind === "resume"
-            ? applications.resumeObjectKey
-            : applications.coverLetterObjectKey,
-      })
+      .select({ key: applications.coverLetterObjectKey })
       .from(applications)
       .where(
         and(
@@ -217,7 +195,12 @@ export async function attachUploadedFile(
 
     await tx
       .update(applications)
-      .set({ ...fields, updatedAt: new Date() })
+      .set({
+        coverLetterObjectKey: key,
+        coverLetterSizeBytes: size,
+        coverLetterMime: mime,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(applications.id, applicationId),
@@ -232,25 +215,10 @@ export async function attachUploadedFile(
 export async function clearUploadedFile(
   userId: string,
   applicationId: string,
-  kind: "resume" | "cover-letter",
 ): Promise<{ previousKey: string | null } | null> {
-  const fields =
-    kind === "resume"
-      ? { resumeObjectKey: null, resumeSizeBytes: null, resumeMime: null }
-      : {
-          coverLetterObjectKey: null,
-          coverLetterSizeBytes: null,
-          coverLetterMime: null,
-        };
-
   return db.transaction(async (tx) => {
     const [existing] = await tx
-      .select({
-        key:
-          kind === "resume"
-            ? applications.resumeObjectKey
-            : applications.coverLetterObjectKey,
-      })
+      .select({ key: applications.coverLetterObjectKey })
       .from(applications)
       .where(
         and(
@@ -262,7 +230,12 @@ export async function clearUploadedFile(
 
     await tx
       .update(applications)
-      .set({ ...fields, updatedAt: new Date() })
+      .set({
+        coverLetterObjectKey: null,
+        coverLetterSizeBytes: null,
+        coverLetterMime: null,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(applications.id, applicationId),

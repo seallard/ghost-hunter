@@ -1,11 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { attachUploadedFile, getApplicationOwner } from "@/lib/applications";
 import { buildObjectKey, deleteObject, uploadObject } from "@/lib/storage";
 
-const KindSchema = z.enum(["resume", "cover-letter"]);
 const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function POST(
@@ -17,11 +15,6 @@ export async function POST(
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const { id: applicationId } = await params;
-  const url = new URL(req.url);
-  const kindParse = KindSchema.safeParse(url.searchParams.get("kind"));
-  if (!kindParse.success)
-    return NextResponse.json({ error: "invalid kind" }, { status: 400 });
-  const kind = kindParse.data;
 
   const owner = await getApplicationOwner(applicationId);
   if (owner !== userId)
@@ -36,14 +29,13 @@ export async function POST(
   if (file.size > MAX_BYTES)
     return NextResponse.json({ error: "too large" }, { status: 413 });
 
-  const key = buildObjectKey(userId, applicationId, kind);
+  const key = buildObjectKey(userId, applicationId);
   const buf = Buffer.from(await file.arrayBuffer());
   await uploadObject(key, buf, file.type);
 
   const result = await attachUploadedFile(
     userId,
     applicationId,
-    kind,
     key,
     file.size,
     file.type,

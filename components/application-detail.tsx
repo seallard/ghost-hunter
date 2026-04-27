@@ -11,18 +11,11 @@ import {
 } from "@/app/actions/applications";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 
-type FieldKey = "jobDescription" | "resumeText" | "coverLetterText";
-type AttachmentKind = "resume" | "cover-letter";
+type FieldKey = "jobDescription" | "coverLetterText";
 
 const FIELDS: { key: FieldKey; label: string }[] = [
   { key: "jobDescription", label: "Job description" },
-  { key: "resumeText", label: "Resume (paste)" },
   { key: "coverLetterText", label: "Cover letter (paste)" },
-];
-
-const ATTACHMENTS: { kind: AttachmentKind; label: string }[] = [
-  { kind: "resume", label: "Resume PDF" },
-  { kind: "cover-letter", label: "Cover letter PDF" },
 ];
 
 export function ApplicationDetail({
@@ -51,7 +44,7 @@ export function ApplicationDetail({
 
   return (
     <div className="bg-muted/30 space-y-4 px-4 py-4">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         {FIELDS.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1.5 text-sm">
             <span className="text-muted-foreground font-medium">{label}</span>
@@ -65,26 +58,11 @@ export function ApplicationDetail({
           </label>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {ATTACHMENTS.map(({ kind, label }) => (
-          <Attachment
-            key={kind}
-            applicationId={application.id}
-            kind={kind}
-            label={label}
-            objectKey={
-              kind === "resume"
-                ? application.resumeObjectKey
-                : application.coverLetterObjectKey
-            }
-            sizeBytes={
-              kind === "resume"
-                ? application.resumeSizeBytes
-                : application.coverLetterSizeBytes
-            }
-          />
-        ))}
-      </div>
+      <CoverLetterAttachment
+        applicationId={application.id}
+        objectKey={application.coverLetterObjectKey}
+        sizeBytes={application.coverLetterSizeBytes}
+      />
       <div className="flex flex-col gap-2">
         <h3 className="text-muted-foreground text-sm font-medium">Timeline</h3>
         <EventTimeline events={events} />
@@ -93,16 +71,12 @@ export function ApplicationDetail({
   );
 }
 
-function Attachment({
+function CoverLetterAttachment({
   applicationId,
-  kind,
-  label,
   objectKey,
   sizeBytes,
 }: {
   applicationId: string;
-  kind: AttachmentKind;
-  label: string;
   objectKey: string | null;
   sizeBytes: number | null;
 }) {
@@ -121,10 +95,10 @@ function Attachment({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(
-        `/api/applications/${applicationId}/upload?kind=${kind}`,
-        { method: "POST", body: fd },
-      );
+      const res = await fetch(`/api/applications/${applicationId}/upload`, {
+        method: "POST",
+        body: fd,
+      });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as {
           error?: string;
@@ -141,15 +115,14 @@ function Attachment({
   function handleRemove() {
     setError(null);
     startTransition(async () => {
-      const result = await clearUploadedFileAction({
-        applicationId,
-        kind,
-      });
+      const result = await clearUploadedFileAction({ applicationId });
       if (!result.ok) {
         setError(result.error);
       }
     });
   }
+
+  const label = "Cover letter PDF";
 
   return (
     <div className="flex flex-col gap-1.5 text-sm">
@@ -168,7 +141,7 @@ function Attachment({
       {objectKey ? (
         <div className="flex items-center gap-2">
           <a
-            href={`/api/applications/${applicationId}/download?kind=${kind}`}
+            href={`/api/applications/${applicationId}/download`}
             target="_blank"
             rel="noopener"
             className="bg-background hover:bg-muted flex flex-1 items-center gap-2 rounded-lg border px-2.5 py-1.5"
