@@ -43,7 +43,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RelativeTime } from "@/components/relative-time";
-import { ApplicationDetail } from "@/components/application-detail";
+import {
+  ApplicationDetail,
+  type FieldKey as DetailFieldKey,
+} from "@/components/application-detail";
 import type { ApplicationWithActivity } from "@/lib/applications";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 import {
@@ -228,7 +231,7 @@ export function ApplicationsTable({
 
   function handleSaveDetailField(
     applicationId: string,
-    key: "jobDescription" | "coverLetterText",
+    key: DetailFieldKey,
     value: string,
   ) {
     const next = value === "" ? null : value;
@@ -285,7 +288,12 @@ export function ApplicationsTable({
           companyName,
           role,
           jobDescription: null,
+          jobUrl: null,
           status: "applied",
+          salary: null,
+          contactName: null,
+          contactEmail: null,
+          contactUrl: null,
           coverLetterText: null,
           coverLetterObjectKey: null,
           coverLetterSizeBytes: null,

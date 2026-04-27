@@ -125,6 +125,11 @@ export async function updateApplicationFields(
     companyName?: string;
     role?: string;
     jobDescription?: string | null;
+    jobUrl?: string | null;
+    salary?: string | null;
+    contactName?: string | null;
+    contactEmail?: string | null;
+    contactUrl?: string | null;
     coverLetterText?: string | null;
   },
 ): Promise<Application | null> {

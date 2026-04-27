@@ -220,6 +220,42 @@ describe("updateApplicationFields", () => {
       await updateApplicationFields("user_b", a.id, { jobDescription: "x" }),
     ).toBeNull();
   });
+
+  it("round-trips jobUrl, salary, and contact fields", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    const updated = await updateApplicationFields("user_a", a.id, {
+      jobUrl: "https://example.com/job/123",
+      salary: "$120-150k",
+      contactName: "Sarah",
+      contactEmail: "sarah@example.com",
+      contactUrl: "https://linkedin.com/in/sarah",
+    });
+    expect(updated?.jobUrl).toBe("https://example.com/job/123");
+    expect(updated?.salary).toBe("$120-150k");
+    expect(updated?.contactName).toBe("Sarah");
+    expect(updated?.contactEmail).toBe("sarah@example.com");
+    expect(updated?.contactUrl).toBe("https://linkedin.com/in/sarah");
+  });
+
+  it("clears nullable fields when passed null", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await updateApplicationFields("user_a", a.id, {
+      jobUrl: "https://example.com/job/123",
+      salary: "$120k",
+    });
+    const cleared = await updateApplicationFields("user_a", a.id, {
+      jobUrl: null,
+      salary: null,
+    });
+    expect(cleared?.jobUrl).toBeNull();
+    expect(cleared?.salary).toBeNull();
+  });
 });
 
 describe("updateEventNote", () => {

@@ -2,15 +2,36 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Paperclip, Trash2 } from "lucide-react";
+import { ExternalLink, Paperclip, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EventTimeline } from "@/components/event-timeline";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 
-type FieldKey = "jobDescription" | "coverLetterText";
+type TextFieldKey =
+  | "jobUrl"
+  | "salary"
+  | "contactName"
+  | "contactEmail"
+  | "contactUrl";
+type TextareaFieldKey = "jobDescription" | "coverLetterText";
+export type FieldKey = TextFieldKey | TextareaFieldKey;
 
-const FIELDS: { key: FieldKey; label: string }[] = [
+const TEXT_FIELDS: {
+  key: TextFieldKey;
+  label: string;
+  type?: "url" | "email" | "text";
+  isLink?: boolean;
+}[] = [
+  { key: "jobUrl", label: "Job posting URL", type: "url", isLink: true },
+  { key: "salary", label: "Salary" },
+  { key: "contactName", label: "Contact name" },
+  { key: "contactEmail", label: "Contact email", type: "email" },
+  { key: "contactUrl", label: "Contact URL", type: "url", isLink: true },
+];
+
+const TEXTAREA_FIELDS: { key: TextareaFieldKey; label: string }[] = [
   { key: "jobDescription", label: "Job description" },
   { key: "coverLetterText", label: "Cover letter (paste)" },
 ];
@@ -36,8 +57,37 @@ export function ApplicationDetail({
 
   return (
     <div className="bg-muted/30 space-y-4 px-4 py-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        {TEXT_FIELDS.map(({ key, label, type, isLink }) => {
+          const value = application[key] ?? "";
+          return (
+            <label key={key} className="flex flex-col gap-1.5 text-sm">
+              <span className="text-muted-foreground font-medium">{label}</span>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type={type ?? "text"}
+                  defaultValue={value}
+                  onBlur={(e) => saveField(key, e.currentTarget.value)}
+                  className="bg-background"
+                />
+                {isLink && value ? (
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open ${label}`}
+                    className="text-muted-foreground hover:text-foreground rounded p-1.5"
+                  >
+                    <ExternalLink className="size-4" />
+                  </a>
+                ) : null}
+              </div>
+            </label>
+          );
+        })}
+      </div>
       <div className="grid gap-4 md:grid-cols-2">
-        {FIELDS.map(({ key, label }) => (
+        {TEXTAREA_FIELDS.map(({ key, label }) => (
           <label key={key} className="flex flex-col gap-1.5 text-sm">
             <span className="text-muted-foreground font-medium">{label}</span>
             <Textarea

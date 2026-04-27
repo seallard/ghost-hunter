@@ -15,6 +15,11 @@ function app(
   return {
     userId: "u",
     jobDescription: null,
+    jobUrl: null,
+    salary: null,
+    contactName: null,
+    contactEmail: null,
+    contactUrl: null,
     coverLetterText: null,
     coverLetterObjectKey: null,
     coverLetterSizeBytes: null,

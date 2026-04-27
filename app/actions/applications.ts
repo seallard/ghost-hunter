@@ -75,6 +75,11 @@ const UpdateFieldsSchema = z.object({
   companyName: z.string().trim().min(1).max(200).optional(),
   role: z.string().trim().min(1).max(200).optional(),
   jobDescription: z.string().max(50_000).nullable().optional(),
+  jobUrl: z.string().max(2_000).nullable().optional(),
+  salary: z.string().max(200).nullable().optional(),
+  contactName: z.string().max(200).nullable().optional(),
+  contactEmail: z.string().max(320).nullable().optional(),
+  contactUrl: z.string().max(2_000).nullable().optional(),
   coverLetterText: z.string().max(50_000).nullable().optional(),
 });
 
