@@ -43,7 +43,7 @@ import type { Application, ApplicationEvent } from "@/lib/db/schema";
 import {
   STATUSES,
   STATUS_LABELS,
-  STATUS_VARIANTS,
+  STATUS_CLASSES,
   type Status,
 } from "@/lib/applications-status";
 import {
@@ -363,7 +363,7 @@ export function ApplicationsTable({
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger className="cursor-pointer">
-                        <Badge variant={STATUS_VARIANTS[app.status]}>
+                        <Badge className={STATUS_CLASSES[app.status]}>
                           {STATUS_LABELS[app.status]}
                         </Badge>
                       </DropdownMenuTrigger>
@@ -552,7 +552,7 @@ function NewRow({
           />
           <Input name="role" placeholder="Role" className="w-[30%]" />
           <span className="w-[15%]">
-            <Badge variant={STATUS_VARIANTS.applied}>
+            <Badge className={STATUS_CLASSES.applied}>
               {STATUS_LABELS.applied}
             </Badge>
           </span>

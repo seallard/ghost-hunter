@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { RelativeTime } from "@/components/relative-time";
-import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/applications-status";
+import { STATUS_CLASSES, STATUS_LABELS } from "@/lib/applications-status";
 import type { ApplicationEvent } from "@/lib/db/schema";
 
 export function EventTimeline({
@@ -47,7 +47,7 @@ function EventItem({
   return (
     <li className="flex flex-col gap-1 text-sm">
       <div className="flex items-center gap-3">
-        <Badge variant={STATUS_VARIANTS[event.status]}>
+        <Badge className={STATUS_CLASSES[event.status]}>
           {STATUS_LABELS[event.status]}
         </Badge>
         <span className="text-muted-foreground">
