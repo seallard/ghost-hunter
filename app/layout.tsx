@@ -19,7 +19,6 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Ghost Hunter",
     description: "Track job application stages and timelines.",
-    images: ["/logo.png"],
   },
 };
 
