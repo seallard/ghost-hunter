@@ -11,11 +11,11 @@ let _client: S3Client | null = null;
 function getClient(): S3Client {
   if (_client) return _client;
   _client = new S3Client({
-    endpoint: process.env.STORAGE_ENDPOINT,
-    region: process.env.STORAGE_REGION ?? "us-east-1",
+    endpoint: process.env.ENDPOINT,
+    region: process.env.REGION ?? "us-east-1",
     credentials: {
-      accessKeyId: process.env.STORAGE_ACCESS_KEY_ID!,
-      secretAccessKey: process.env.STORAGE_SECRET_ACCESS_KEY!,
+      accessKeyId: process.env.ACCESS_KEY_ID!,
+      secretAccessKey: process.env.SECRET_ACCESS_KEY!,
     },
     forcePathStyle: true,
   });
@@ -23,8 +23,8 @@ function getClient(): S3Client {
 }
 
 function getBucket(): string {
-  const bucket = process.env.STORAGE_BUCKET;
-  if (!bucket) throw new Error("STORAGE_BUCKET is not set");
+  const bucket = process.env.BUCKET;
+  if (!bucket) throw new Error("BUCKET is not set");
   return bucket;
 }
 
