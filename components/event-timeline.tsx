@@ -1,14 +1,19 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { RelativeTime } from "@/components/relative-time";
 import { STATUS_LABELS, STATUS_VARIANTS } from "@/lib/applications-status";
 import type { ApplicationEvent } from "@/lib/db/schema";
-import { updateEventNoteAction } from "@/app/actions/applications";
 
-export function EventTimeline({ events }: { events: ApplicationEvent[] }) {
+export function EventTimeline({
+  events,
+  onSaveNote,
+}: {
+  events: ApplicationEvent[];
+  onSaveNote: (eventId: string, note: string | null) => void;
+}) {
   if (events.length === 0) {
     return <p className="text-muted-foreground text-sm">No events yet.</p>;
   }
@@ -16,31 +21,27 @@ export function EventTimeline({ events }: { events: ApplicationEvent[] }) {
   return (
     <ol className="space-y-3">
       {events.map((event) => (
-        <EventItem key={event.id} event={event} />
+        <EventItem key={event.id} event={event} onSave={onSaveNote} />
       ))}
     </ol>
   );
 }
 
-function EventItem({ event }: { event: ApplicationEvent }) {
+function EventItem({
+  event,
+  onSave,
+}: {
+  event: ApplicationEvent;
+  onSave: (eventId: string, note: string | null) => void;
+}) {
   const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
 
   function save(value: string) {
     setEditing(false);
     const trimmed = value.trim();
     const next = trimmed === "" ? null : trimmed;
     if (next === (event.note ?? null)) return;
-
-    startTransition(async () => {
-      const result = await updateEventNoteAction({
-        eventId: event.id,
-        note: next,
-      });
-      if (!result.ok) {
-        console.error("update note failed", result.error);
-      }
-    });
+    onSave(event.id, next);
   }
 
   return (
@@ -57,7 +58,6 @@ function EventItem({ event }: { event: ApplicationEvent }) {
         <Textarea
           autoFocus
           defaultValue={event.note ?? ""}
-          disabled={pending}
           onBlur={(e) => save(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === "Escape") {

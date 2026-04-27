@@ -39,7 +39,7 @@ import {
 import { RelativeTime } from "@/components/relative-time";
 import { ApplicationDetail } from "@/components/application-detail";
 import type { ApplicationWithActivity } from "@/lib/applications";
-import type { ApplicationEvent } from "@/lib/db/schema";
+import type { Application, ApplicationEvent } from "@/lib/db/schema";
 import {
   STATUSES,
   STATUS_LABELS,
@@ -48,14 +48,91 @@ import {
 } from "@/lib/applications-status";
 import {
   changeApplicationStatusAction,
+  clearUploadedFileAction,
   createApplicationAction,
+  type CreateApplicationResult,
   deleteApplicationAction,
   updateApplicationFieldsAction,
+  updateEventNoteAction,
 } from "@/app/actions/applications";
 
 const COLS = 4;
 
 type EditableField = "companyName" | "role";
+
+type AppPatch =
+  | { type: "create"; app: ApplicationWithActivity }
+  | { type: "delete"; id: string }
+  | { type: "status"; id: string; status: Status }
+  | { type: "fields"; id: string; fields: Partial<Application> }
+  | { type: "clear-cover-letter"; id: string };
+
+type EventPatch =
+  | { type: "note"; eventId: string; appId: string; note: string | null }
+  | { type: "add-status"; appId: string; status: Status };
+
+function reduceApps(
+  state: ApplicationWithActivity[],
+  patch: AppPatch,
+): ApplicationWithActivity[] {
+  switch (patch.type) {
+    case "create":
+      return [patch.app, ...state];
+    case "delete":
+      return state.filter((a) => a.id !== patch.id);
+    case "status":
+      return state.map((a) =>
+        a.id === patch.id
+          ? { ...a, status: patch.status, lastActivityAt: new Date() }
+          : a,
+      );
+    case "fields":
+      return state.map((a) =>
+        a.id === patch.id ? { ...a, ...patch.fields } : a,
+      );
+    case "clear-cover-letter":
+      return state.map((a) =>
+        a.id === patch.id
+          ? {
+              ...a,
+              coverLetterObjectKey: null,
+              coverLetterSizeBytes: null,
+              coverLetterMime: null,
+            }
+          : a,
+      );
+  }
+}
+
+function reduceEvents(
+  state: Map<string, ApplicationEvent[]>,
+  patch: EventPatch,
+): Map<string, ApplicationEvent[]> {
+  const next = new Map(state);
+  if (patch.type === "note") {
+    const list = next.get(patch.appId);
+    if (!list) return state;
+    next.set(
+      patch.appId,
+      list.map((e) =>
+        e.id === patch.eventId ? { ...e, note: patch.note } : e,
+      ),
+    );
+    return next;
+  }
+  // add-status: prepend a temp event so the timeline reflects the change
+  const tempEvent: ApplicationEvent = {
+    id: crypto.randomUUID(),
+    applicationId: patch.appId,
+    userId: "",
+    status: patch.status,
+    note: null,
+    occurredAt: new Date(),
+    createdAt: new Date(),
+  };
+  next.set(patch.appId, [tempEvent, ...(next.get(patch.appId) ?? [])]);
+  return next;
+}
 
 export function ApplicationsTable({
   applications,
@@ -72,26 +149,28 @@ export function ApplicationsTable({
   } | null>(null);
   const [, startTransition] = useTransition();
 
-  const [optimisticApps, applyStatusPatch] = useOptimistic(
+  const [optimisticApps, applyAppPatch] = useOptimistic(
     applications,
-    (state, patch: { id: string; status: Status }) =>
-      state.map((a) =>
-        a.id === patch.id
-          ? { ...a, status: patch.status, lastActivityAt: new Date() }
-          : a,
-      ),
+    reduceApps,
+  );
+  const [optimisticEvents, applyEventPatch] = useOptimistic(
+    eventsByApp,
+    reduceEvents,
   );
 
   function handleStatusChange(applicationId: string, newStatus: Status) {
     startTransition(async () => {
-      applyStatusPatch({ id: applicationId, status: newStatus });
+      applyAppPatch({ type: "status", id: applicationId, status: newStatus });
+      applyEventPatch({
+        type: "add-status",
+        appId: applicationId,
+        status: newStatus,
+      });
       const result = await changeApplicationStatusAction(
         applicationId,
         newStatus,
       );
-      if (!result.ok) {
-        console.error("status change failed", result.error);
-      }
+      if (!result.ok) console.error("status change failed", result.error);
     });
   }
 
@@ -106,23 +185,90 @@ export function ApplicationsTable({
     if (trimmed === "" || trimmed === original) return;
 
     startTransition(async () => {
+      applyAppPatch({
+        type: "fields",
+        id: applicationId,
+        fields: { [field]: trimmed },
+      });
       const result = await updateApplicationFieldsAction({
         applicationId,
         [field]: trimmed,
       });
-      if (!result.ok) {
-        console.error("update field failed", result.error);
-      }
+      if (!result.ok) console.error("update field failed", result.error);
+    });
+  }
+
+  function handleSaveDetailField(
+    applicationId: string,
+    key: "jobDescription" | "coverLetterText",
+    value: string,
+  ) {
+    const next = value === "" ? null : value;
+    startTransition(async () => {
+      applyAppPatch({
+        type: "fields",
+        id: applicationId,
+        fields: { [key]: next },
+      });
+      const result = await updateApplicationFieldsAction({
+        applicationId,
+        [key]: next,
+      });
+      if (!result.ok) console.error("update fields failed", result.error);
+    });
+  }
+
+  function handleClearCoverLetter(applicationId: string) {
+    startTransition(async () => {
+      applyAppPatch({ type: "clear-cover-letter", id: applicationId });
+      const result = await clearUploadedFileAction({ applicationId });
+      if (!result.ok) console.error("clear cover letter failed", result.error);
+    });
+  }
+
+  function handleSaveNote(appId: string, eventId: string, note: string | null) {
+    startTransition(async () => {
+      applyEventPatch({ type: "note", appId, eventId, note });
+      const result = await updateEventNoteAction({ eventId, note });
+      if (!result.ok) console.error("update note failed", result.error);
     });
   }
 
   function handleDelete(applicationId: string) {
     startTransition(async () => {
+      applyAppPatch({ type: "delete", id: applicationId });
       const result = await deleteApplicationAction(applicationId);
-      if (!result.ok) {
-        console.error("delete failed", result.error);
-      }
+      if (!result.ok) console.error("delete failed", result.error);
     });
+  }
+
+  async function handleCreate(
+    formData: FormData,
+  ): Promise<CreateApplicationResult> {
+    const companyName = String(formData.get("companyName") ?? "").trim();
+    const role = String(formData.get("role") ?? "").trim();
+    if (companyName && role) {
+      const now = new Date();
+      applyAppPatch({
+        type: "create",
+        app: {
+          id: crypto.randomUUID(),
+          userId: "",
+          companyName,
+          role,
+          jobDescription: null,
+          status: "applied",
+          coverLetterText: null,
+          coverLetterObjectKey: null,
+          coverLetterSizeBytes: null,
+          coverLetterMime: null,
+          createdAt: now,
+          updatedAt: now,
+          lastActivityAt: now,
+        },
+      });
+    }
+    return createApplicationAction(formData);
   }
 
   return (
@@ -138,7 +284,7 @@ export function ApplicationsTable({
         </TableHeader>
         <TableBody>
           {adding ? (
-            <NewRow onDone={() => setAdding(false)} />
+            <NewRow onSubmit={handleCreate} onDone={() => setAdding(false)} />
           ) : (
             <TableRow>
               <TableCell colSpan={COLS} className="p-0">
@@ -249,7 +395,16 @@ export function ApplicationsTable({
                     <TableCell colSpan={COLS} className="p-0">
                       <ApplicationDetail
                         application={app}
-                        events={eventsByApp.get(app.id) ?? []}
+                        events={optimisticEvents.get(app.id) ?? []}
+                        onSaveField={(key, value) =>
+                          handleSaveDetailField(app.id, key, value)
+                        }
+                        onClearCoverLetter={() =>
+                          handleClearCoverLetter(app.id)
+                        }
+                        onSaveNote={(eventId, note) =>
+                          handleSaveNote(app.id, eventId, note)
+                        }
                       />
                     </TableCell>
                   </TableRow>
@@ -338,22 +493,29 @@ function DeleteButton({
   );
 }
 
-function NewRow({ onDone }: { onDone: () => void }) {
+function NewRow({
+  onSubmit,
+  onDone,
+}: {
+  onSubmit: (formData: FormData) => Promise<CreateApplicationResult>;
+  onDone: () => void;
+}) {
   const formRef = useRef<HTMLFormElement>(null);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function submit(formData: FormData) {
     setError(null);
     startTransition(async () => {
-      const result = await createApplicationAction(formData);
-      if (result.ok) {
-        onDone();
-      } else {
+      const promise = onSubmit(formData);
+      onDone();
+      const result = await promise;
+      if (!result.ok) {
         const first =
           result.errors.companyName?.[0] ??
           result.errors.role?.[0] ??
           "Could not save";
+        console.error("create application failed", first);
         setError(first);
       }
     });
@@ -366,10 +528,7 @@ function NewRow({ onDone }: { onDone: () => void }) {
           ref={formRef}
           action={submit}
           onBlur={(e) => {
-            if (
-              !e.currentTarget.contains(e.relatedTarget as Node | null) &&
-              !pending
-            ) {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
               const fd = new FormData(e.currentTarget);
               const company = String(fd.get("companyName") ?? "").trim();
               const role = String(fd.get("role") ?? "").trim();
@@ -389,22 +548,16 @@ function NewRow({ onDone }: { onDone: () => void }) {
             name="companyName"
             placeholder="Company"
             autoFocus
-            disabled={pending}
             className="w-[35%]"
           />
-          <Input
-            name="role"
-            placeholder="Role"
-            disabled={pending}
-            className="w-[30%]"
-          />
+          <Input name="role" placeholder="Role" className="w-[30%]" />
           <span className="w-[15%]">
             <Badge variant={STATUS_VARIANTS.applied}>
               {STATUS_LABELS.applied}
             </Badge>
           </span>
           <span className="text-muted-foreground w-[20%] text-sm">
-            {pending ? "Saving…" : error ? error : "just now"}
+            {error ?? "just now"}
           </span>
         </form>
       </TableCell>

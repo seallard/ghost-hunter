@@ -1,14 +1,10 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { Paperclip, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { EventTimeline } from "@/components/event-timeline";
-import {
-  clearUploadedFileAction,
-  updateApplicationFieldsAction,
-} from "@/app/actions/applications";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 
 type FieldKey = "jobDescription" | "coverLetterText";
@@ -21,25 +17,20 @@ const FIELDS: { key: FieldKey; label: string }[] = [
 export function ApplicationDetail({
   application,
   events,
+  onSaveField,
+  onClearCoverLetter,
+  onSaveNote,
 }: {
   application: Application;
   events: ApplicationEvent[];
+  onSaveField: (key: FieldKey, value: string) => void;
+  onClearCoverLetter: () => void;
+  onSaveNote: (eventId: string, note: string | null) => void;
 }) {
-  const [pending, startTransition] = useTransition();
-
   function saveField(key: FieldKey, value: string) {
     const original = application[key] ?? "";
     if (value === original) return;
-
-    startTransition(async () => {
-      const result = await updateApplicationFieldsAction({
-        applicationId: application.id,
-        [key]: value === "" ? null : value,
-      });
-      if (!result.ok) {
-        console.error("update fields failed", result.error);
-      }
-    });
+    onSaveField(key, value);
   }
 
   return (
@@ -50,7 +41,6 @@ export function ApplicationDetail({
             <span className="text-muted-foreground font-medium">{label}</span>
             <Textarea
               defaultValue={application[key] ?? ""}
-              disabled={pending}
               onBlur={(e) => saveField(key, e.currentTarget.value)}
               rows={6}
               className="bg-background"
@@ -62,10 +52,11 @@ export function ApplicationDetail({
         applicationId={application.id}
         objectKey={application.coverLetterObjectKey}
         sizeBytes={application.coverLetterSizeBytes}
+        onClear={onClearCoverLetter}
       />
       <div className="flex flex-col gap-2">
         <h3 className="text-muted-foreground text-sm font-medium">Timeline</h3>
-        <EventTimeline events={events} />
+        <EventTimeline events={events} onSaveNote={onSaveNote} />
       </div>
     </div>
   );
@@ -77,15 +68,16 @@ function CoverLetterAttachment({
   applicationId,
   objectKey,
   sizeBytes,
+  onClear,
 }: {
   applicationId: string;
   objectKey: string | null;
   sizeBytes: number | null;
+  onClear: () => void;
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [, startTransition] = useTransition();
 
   async function uploadFile(file: File) {
     setError(null);
@@ -112,16 +104,6 @@ function CoverLetterAttachment({
     } finally {
       setPending(false);
     }
-  }
-
-  function handleRemove() {
-    setError(null);
-    startTransition(async () => {
-      const result = await clearUploadedFileAction({ applicationId });
-      if (!result.ok) {
-        setError(result.error);
-      }
-    });
   }
 
   return (
@@ -168,7 +150,7 @@ function CoverLetterAttachment({
             size="icon-sm"
             variant="ghost"
             disabled={pending}
-            onClick={handleRemove}
+            onClick={onClear}
             aria-label={`Remove ${COVER_LETTER_LABEL}`}
           >
             <Trash2 className="size-4" />
