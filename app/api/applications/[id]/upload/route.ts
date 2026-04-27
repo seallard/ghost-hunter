@@ -34,14 +34,7 @@ export async function POST(
 
   const key = buildObjectKey(userId, applicationId);
   const buf = Buffer.from(await file.arrayBuffer());
-
-  try {
-    await uploadObject(key, buf, file.type);
-  } catch (err) {
-    console.error("upload to bucket failed", { key, applicationId, err });
-    const message = err instanceof Error ? err.message : "upload failed";
-    return NextResponse.json({ error: message }, { status: 502 });
-  }
+  await uploadObject(key, buf, file.type);
 
   const result = await setCoverLetterAttachment(userId, applicationId, {
     key,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Paperclip, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -78,6 +79,7 @@ function CoverLetterAttachment({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   async function uploadFile(file: File) {
     setError(null);
@@ -93,7 +95,9 @@ function CoverLetterAttachment({
         method: "POST",
         body: fd,
       });
-      if (!res.ok) {
+      if (res.ok) {
+        router.refresh();
+      } else {
         const body = (await res.json().catch(() => ({}))) as {
           error?: string;
         };
