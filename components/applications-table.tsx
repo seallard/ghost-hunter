@@ -7,7 +7,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   applyFilter,
@@ -66,7 +66,7 @@ import {
   updateEventNoteAction,
 } from "@/app/actions/applications";
 
-const COLS = 4;
+const COLS = 5;
 
 type EditableField = "companyName" | "role";
 
@@ -363,6 +363,7 @@ export function ApplicationsTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10" />
             <SortableHeader
               label="Company"
               sortKey="companyName"
@@ -443,6 +444,15 @@ export function ApplicationsTable({
                     setExpandedId((id) => (id === app.id ? null : app.id))
                   }
                 >
+                  <TableCell className="text-muted-foreground w-10 px-3">
+                    <ChevronRight
+                      className={cn(
+                        "size-4 transition-transform",
+                        expanded && "rotate-90",
+                      )}
+                      aria-hidden
+                    />
+                  </TableCell>
                   <TableCell
                     className="font-medium"
                     onClick={(e) => {
