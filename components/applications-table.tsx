@@ -1,6 +1,12 @@
 "use client";
 
-import { Fragment, useRef, useState, useTransition } from "react";
+import {
+  Fragment,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -66,8 +72,19 @@ export function ApplicationsTable({
   } | null>(null);
   const [, startTransition] = useTransition();
 
+  const [optimisticApps, applyStatusPatch] = useOptimistic(
+    applications,
+    (state, patch: { id: string; status: Status }) =>
+      state.map((a) =>
+        a.id === patch.id
+          ? { ...a, status: patch.status, lastActivityAt: new Date() }
+          : a,
+      ),
+  );
+
   function handleStatusChange(applicationId: string, newStatus: Status) {
     startTransition(async () => {
+      applyStatusPatch({ id: applicationId, status: newStatus });
       const result = await changeApplicationStatusAction(
         applicationId,
         newStatus,
@@ -136,7 +153,7 @@ export function ApplicationsTable({
               </TableCell>
             </TableRow>
           )}
-          {applications.map((app) => {
+          {optimisticApps.map((app) => {
             const expanded = expandedId === app.id;
             const isEditingCompany =
               editing?.id === app.id && editing.field === "companyName";
