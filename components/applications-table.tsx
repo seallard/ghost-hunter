@@ -7,7 +7,13 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  applyFilter,
+  type SortDir,
+  type SortKey,
+} from "@/lib/applications-filter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,7 +153,29 @@ export function ApplicationsTable({
     id: string;
     field: EditableField;
   } | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<ReadonlySet<Status>>(
+    new Set(),
+  );
+  const [sort, setSort] = useState<{ key: SortKey; dir: SortDir }>({
+    key: "lastActivityAt",
+    dir: "desc",
+  });
   const [, startTransition] = useTransition();
+
+  function toggleStatusFilter(s: Status) {
+    setStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setSearch("");
+    setStatusFilter(new Set());
+  }
 
   const [optimisticApps, applyAppPatch] = useOptimistic(
     applications,
@@ -271,15 +299,72 @@ export function ApplicationsTable({
     return createApplicationAction(formData);
   }
 
+  const visibleApps = applyFilter(optimisticApps, {
+    search,
+    statuses: statusFilter,
+    sort,
+  });
+
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="mx-auto max-w-4xl space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.currentTarget.value)}
+          placeholder="Search company or role"
+          className="max-w-xs"
+        />
+        <div className="flex flex-wrap items-center gap-1.5">
+          {STATUSES.map((s) => {
+            const active = statusFilter.has(s);
+            const muted = statusFilter.size > 0 && !active;
+            return (
+              <button
+                type="button"
+                key={s}
+                onClick={() => toggleStatusFilter(s)}
+                aria-pressed={active}
+                className="cursor-pointer"
+              >
+                <Badge className={cn(STATUS_CLASSES[s], muted && "opacity-40")}>
+                  {STATUS_LABELS[s]}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[35%]">Company</TableHead>
-            <TableHead className="w-[30%]">Role</TableHead>
-            <TableHead className="w-[15%]">Status</TableHead>
-            <TableHead className="w-[20%]">Last update</TableHead>
+            <SortableHeader
+              label="Company"
+              sortKey="companyName"
+              sort={sort}
+              onSortChange={setSort}
+              className="w-[35%]"
+            />
+            <SortableHeader
+              label="Role"
+              sortKey="role"
+              sort={sort}
+              onSortChange={setSort}
+              className="w-[30%]"
+            />
+            <SortableHeader
+              label="Status"
+              sortKey="status"
+              sort={sort}
+              onSortChange={setSort}
+              className="w-[15%]"
+            />
+            <SortableHeader
+              label="Last update"
+              sortKey="lastActivityAt"
+              sort={sort}
+              onSortChange={setSort}
+              className="w-[20%]"
+            />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -299,7 +384,25 @@ export function ApplicationsTable({
               </TableCell>
             </TableRow>
           )}
-          {optimisticApps.map((app) => {
+          {visibleApps.length === 0 && optimisticApps.length > 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell
+                colSpan={COLS}
+                className="text-muted-foreground py-6 text-center text-sm"
+              >
+                No applications match these filters.{" "}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="text-foreground h-auto px-2 py-0.5"
+                >
+                  Clear filters
+                </Button>
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {visibleApps.map((app) => {
             const expanded = expandedId === app.id;
             const isEditingCompany =
               editing?.id === app.id && editing.field === "companyName";
@@ -415,6 +518,57 @@ export function ApplicationsTable({
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function SortableHeader({
+  label,
+  sortKey,
+  sort,
+  onSortChange,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: { key: SortKey; dir: SortDir };
+  onSortChange: (next: { key: SortKey; dir: SortDir }) => void;
+  className?: string;
+}) {
+  const active = sort.key === sortKey;
+  const ariaSort = active
+    ? sort.dir === "asc"
+      ? "ascending"
+      : "descending"
+    : "none";
+
+  function handleClick() {
+    if (active) {
+      onSortChange({ key: sortKey, dir: sort.dir === "asc" ? "desc" : "asc" });
+    } else {
+      onSortChange({
+        key: sortKey,
+        dir: sortKey === "lastActivityAt" ? "desc" : "asc",
+      });
+    }
+  }
+
+  return (
+    <TableHead className={className} aria-sort={ariaSort}>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+      >
+        {label}
+        {active ? (
+          sort.dir === "asc" ? (
+            <ArrowUp className="size-3" />
+          ) : (
+            <ArrowDown className="size-3" />
+          )
+        ) : null}
+      </button>
+    </TableHead>
   );
 }
 
