@@ -14,6 +14,7 @@ import {
   type SortDir,
   type SortKey,
 } from "@/lib/applications-filter";
+import { computeStats } from "@/lib/applications-stats";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -312,9 +313,20 @@ export function ApplicationsTable({
     statuses: statusFilter,
     sort,
   });
+  const stats = computeStats(optimisticApps);
 
   return (
     <div className="mx-auto max-w-4xl space-y-3">
+      <div className="flex items-baseline gap-2">
+        <span className="text-3xl font-semibold tabular-nums">
+          {stats.total}
+        </span>
+        <span className="text-muted-foreground text-sm">
+          application{stats.total === 1 ? "" : "s"}
+          {stats.active > 0 ? <> · {stats.active} active</> : null}
+          {stats.offer > 0 ? <> · {stats.offer} offer</> : null}
+        </span>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={search}
@@ -326,6 +338,7 @@ export function ApplicationsTable({
           {STATUSES.map((s) => {
             const active = statusFilter.has(s);
             const muted = statusFilter.size > 0 && !active;
+            const count = stats.byStatus[s];
             return (
               <button
                 type="button"
@@ -336,6 +349,11 @@ export function ApplicationsTable({
               >
                 <Badge className={cn(STATUS_CLASSES[s], muted && "opacity-40")}>
                   {STATUS_LABELS[s]}
+                  {count > 0 ? (
+                    <span className="ml-1 tabular-nums opacity-70">
+                      {count}
+                    </span>
+                  ) : null}
                 </Badge>
               </button>
             );
