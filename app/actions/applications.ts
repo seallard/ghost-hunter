@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   changeApplicationStatus,
-  clearUploadedFile,
   createApplication,
   deleteApplication,
+  setCoverLetterAttachment,
   updateApplicationFields,
   updateEventNote,
 } from "@/lib/applications";
@@ -163,7 +163,11 @@ export async function clearUploadedFileAction(
   const parsed = ClearUploadSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
 
-  const result = await clearUploadedFile(userId, parsed.data.applicationId);
+  const result = await setCoverLetterAttachment(
+    userId,
+    parsed.data.applicationId,
+    null,
+  );
   if (!result) return { ok: false, error: "not found" };
   if (result.previousKey) {
     await deleteObject(result.previousKey).catch(() => {});

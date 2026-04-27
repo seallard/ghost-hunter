@@ -1,19 +1,20 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
-  attachUploadedFile,
   changeApplicationStatus,
-  clearUploadedFile,
   createApplication,
   deleteApplication,
   getApplicationEvents,
   getApplicationOwner,
-  getAttachmentKey,
+  getCoverLetterKey,
   getEventsForApplications,
   listApplications,
+  setCoverLetterAttachment,
   updateApplicationFields,
   updateEventNote,
 } from "./applications";
+
+const PDF = { size: 1234, mime: "application/pdf" } as const;
 import { db } from "./db";
 import { applicationEvents } from "./db/schema";
 
@@ -322,62 +323,44 @@ describe("getApplicationOwner", () => {
   });
 });
 
-describe("attachUploadedFile", () => {
-  it("writes the cover letter object key/size/mime for the given user", async () => {
+describe("setCoverLetterAttachment", () => {
+  it("writes the object key/size/mime for the given user", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    const result = await attachUploadedFile(
-      "user_a",
-      a.id,
-      "key123",
-      1234,
-      "application/pdf",
-    );
+    const result = await setCoverLetterAttachment("user_a", a.id, {
+      key: "key123",
+      ...PDF,
+    });
     expect(result).toEqual({ previousKey: null });
 
     const [row] = await listApplications("user_a");
     expect(row.coverLetterObjectKey).toBe("key123");
-    expect(row.coverLetterSizeBytes).toBe(1234);
-    expect(row.coverLetterMime).toBe("application/pdf");
+    expect(row.coverLetterSizeBytes).toBe(PDF.size);
+    expect(row.coverLetterMime).toBe(PDF.mime);
   });
 
-  it("returns the previous key when replacing an existing upload", async () => {
+  it("returns the previous key when replacing an existing attachment", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    await attachUploadedFile("user_a", a.id, "old-key", 100, "application/pdf");
-    const result = await attachUploadedFile(
-      "user_a",
-      a.id,
-      "new-key",
-      200,
-      "application/pdf",
-    );
+    await setCoverLetterAttachment("user_a", a.id, { key: "old-key", ...PDF });
+    const result = await setCoverLetterAttachment("user_a", a.id, {
+      key: "new-key",
+      ...PDF,
+    });
     expect(result?.previousKey).toBe("old-key");
   });
 
-  it("refuses to attach to an application owned by another user (auth invariant)", async () => {
+  it("clears the metadata and returns the previous key when passed null", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    expect(
-      await attachUploadedFile("user_b", a.id, "key", 1, "application/pdf"),
-    ).toBeNull();
-  });
-});
-
-describe("clearUploadedFile", () => {
-  it("clears the metadata and returns the previous key", async () => {
-    const a = await createApplication("user_a", {
-      companyName: "Acme",
-      role: "SWE",
-    });
-    await attachUploadedFile("user_a", a.id, "key123", 1234, "application/pdf");
-    const result = await clearUploadedFile("user_a", a.id);
+    await setCoverLetterAttachment("user_a", a.id, { key: "key123", ...PDF });
+    const result = await setCoverLetterAttachment("user_a", a.id, null);
     expect(result?.previousKey).toBe("key123");
 
     const [row] = await listApplications("user_a");
@@ -386,31 +369,34 @@ describe("clearUploadedFile", () => {
     expect(row.coverLetterMime).toBeNull();
   });
 
-  it("refuses to clear an application owned by another user (auth invariant)", async () => {
+  it("refuses to write to an application owned by another user (auth invariant)", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    expect(await clearUploadedFile("user_b", a.id)).toBeNull();
+    expect(
+      await setCoverLetterAttachment("user_b", a.id, { key: "k", ...PDF }),
+    ).toBeNull();
+    expect(await setCoverLetterAttachment("user_b", a.id, null)).toBeNull();
   });
 });
 
-describe("getAttachmentKey", () => {
-  it("returns the cover letter key for the owning user", async () => {
+describe("getCoverLetterKey", () => {
+  it("returns the key for the owning user", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    await attachUploadedFile("user_a", a.id, "rk", 1, "application/pdf");
-    expect(await getAttachmentKey("user_a", a.id)).toBe("rk");
+    await setCoverLetterAttachment("user_a", a.id, { key: "rk", ...PDF });
+    expect(await getCoverLetterKey("user_a", a.id)).toBe("rk");
   });
 
-  it("returns null when no upload is attached", async () => {
+  it("returns null when no attachment is set", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
       role: "SWE",
     });
-    expect(await getAttachmentKey("user_a", a.id)).toBeNull();
+    expect(await getCoverLetterKey("user_a", a.id)).toBeNull();
   });
 
   it("refuses to return a key for another user (auth invariant)", async () => {
@@ -418,7 +404,7 @@ describe("getAttachmentKey", () => {
       companyName: "Acme",
       role: "SWE",
     });
-    await attachUploadedFile("user_a", a.id, "rk", 1, "application/pdf");
-    expect(await getAttachmentKey("user_b", a.id)).toBeNull();
+    await setCoverLetterAttachment("user_a", a.id, { key: "rk", ...PDF });
+    expect(await getCoverLetterKey("user_b", a.id)).toBeNull();
   });
 });

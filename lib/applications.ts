@@ -161,7 +161,7 @@ export async function getApplicationOwner(
   return row?.userId ?? null;
 }
 
-export async function getAttachmentKey(
+export async function getCoverLetterKey(
   userId: string,
   applicationId: string,
 ): Promise<string | null> {
@@ -174,74 +174,34 @@ export async function getAttachmentKey(
   return row?.key ?? null;
 }
 
-export async function attachUploadedFile(
+export type CoverLetterAttachment = { key: string; size: number; mime: string };
+
+export async function setCoverLetterAttachment(
   userId: string,
   applicationId: string,
-  key: string,
-  size: number,
-  mime: string,
+  attachment: CoverLetterAttachment | null,
 ): Promise<{ previousKey: string | null } | null> {
   return db.transaction(async (tx) => {
+    const owned = and(
+      eq(applications.id, applicationId),
+      eq(applications.userId, userId),
+    );
+
     const [existing] = await tx
       .select({ key: applications.coverLetterObjectKey })
       .from(applications)
-      .where(
-        and(
-          eq(applications.id, applicationId),
-          eq(applications.userId, userId),
-        ),
-      );
+      .where(owned);
     if (!existing) return null;
 
     await tx
       .update(applications)
       .set({
-        coverLetterObjectKey: key,
-        coverLetterSizeBytes: size,
-        coverLetterMime: mime,
+        coverLetterObjectKey: attachment?.key ?? null,
+        coverLetterSizeBytes: attachment?.size ?? null,
+        coverLetterMime: attachment?.mime ?? null,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(applications.id, applicationId),
-          eq(applications.userId, userId),
-        ),
-      );
-
-    return { previousKey: existing.key ?? null };
-  });
-}
-
-export async function clearUploadedFile(
-  userId: string,
-  applicationId: string,
-): Promise<{ previousKey: string | null } | null> {
-  return db.transaction(async (tx) => {
-    const [existing] = await tx
-      .select({ key: applications.coverLetterObjectKey })
-      .from(applications)
-      .where(
-        and(
-          eq(applications.id, applicationId),
-          eq(applications.userId, userId),
-        ),
-      );
-    if (!existing) return null;
-
-    await tx
-      .update(applications)
-      .set({
-        coverLetterObjectKey: null,
-        coverLetterSizeBytes: null,
-        coverLetterMime: null,
-        updatedAt: new Date(),
-      })
-      .where(
-        and(
-          eq(applications.id, applicationId),
-          eq(applications.userId, userId),
-        ),
-      );
+      .where(owned);
 
     return { previousKey: existing.key ?? null };
   });

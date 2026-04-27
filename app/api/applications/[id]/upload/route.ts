@@ -1,7 +1,10 @@
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
-import { attachUploadedFile, getApplicationOwner } from "@/lib/applications";
+import {
+  getApplicationOwner,
+  setCoverLetterAttachment,
+} from "@/lib/applications";
 import { buildObjectKey, deleteObject, uploadObject } from "@/lib/storage";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -33,13 +36,11 @@ export async function POST(
   const buf = Buffer.from(await file.arrayBuffer());
   await uploadObject(key, buf, file.type);
 
-  const result = await attachUploadedFile(
-    userId,
-    applicationId,
+  const result = await setCoverLetterAttachment(userId, applicationId, {
     key,
-    file.size,
-    file.type,
-  );
+    size: file.size,
+    mime: file.type,
+  });
   if (!result) {
     await deleteObject(key).catch(() => {});
     return NextResponse.json({ error: "not found" }, { status: 404 });

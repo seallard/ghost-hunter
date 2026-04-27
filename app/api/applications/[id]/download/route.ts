@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getAttachmentKey } from "@/lib/applications";
+import { getCoverLetterKey } from "@/lib/applications";
 import { getDownloadUrl } from "@/lib/storage";
 
 export async function GET(
@@ -13,7 +13,7 @@ export async function GET(
 
   const { id: applicationId } = await params;
 
-  const key = await getAttachmentKey(userId, applicationId);
+  const key = await getCoverLetterKey(userId, applicationId);
   if (!key) return NextResponse.json({ error: "not found" }, { status: 404 });
 
   const signed = await getDownloadUrl(key);

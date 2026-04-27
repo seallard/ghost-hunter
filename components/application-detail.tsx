@@ -71,6 +71,8 @@ export function ApplicationDetail({
   );
 }
 
+const COVER_LETTER_LABEL = "Cover letter PDF";
+
 function CoverLetterAttachment({
   applicationId,
   objectKey,
@@ -122,11 +124,11 @@ function CoverLetterAttachment({
     });
   }
 
-  const label = "Cover letter PDF";
-
   return (
     <div className="flex flex-col gap-1.5 text-sm">
-      <span className="text-muted-foreground font-medium">{label}</span>
+      <span className="text-muted-foreground font-medium">
+        {COVER_LETTER_LABEL}
+      </span>
       <input
         ref={fileInputRef}
         type="file"
@@ -148,7 +150,7 @@ function CoverLetterAttachment({
           >
             <Paperclip className="size-4" />
             <span className="truncate">
-              {label}
+              {COVER_LETTER_LABEL}
               {sizeBytes != null ? ` · ${formatSize(sizeBytes)}` : ""}
             </span>
           </a>
@@ -167,7 +169,7 @@ function CoverLetterAttachment({
             variant="ghost"
             disabled={pending}
             onClick={handleRemove}
-            aria-label={`Remove ${label}`}
+            aria-label={`Remove ${COVER_LETTER_LABEL}`}
           >
             <Trash2 className="size-4" />
           </Button>
