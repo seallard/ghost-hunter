@@ -14,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ghost-hunter",
+  title: "Ghost Hunter",
   description: "Track job application stages and timelines.",
+  openGraph: {
+    title: "Ghost Hunter",
+    description: "Track job application stages and timelines.",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({

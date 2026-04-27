@@ -1,3 +1,5 @@
+import Image from "next/image";
+import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
@@ -22,8 +24,19 @@ export default async function Home() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <header className="flex items-center justify-between border-b px-6 py-4">
-        <h1 className="text-lg font-semibold tracking-tight">ghost-hunter</h1>
+      <header className="flex items-center justify-between border-b px-6 py-3">
+        <Link href="/" aria-label="Ghost Hunter — home">
+          <h1>
+            <Image
+              src="/logo.png"
+              alt="Ghost Hunter"
+              width={140}
+              height={76}
+              priority
+              className="h-10 w-auto"
+            />
+          </h1>
+        </Link>
         <UserButton />
       </header>
       <section className="border-b px-6 py-6">

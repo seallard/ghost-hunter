@@ -1,8 +1,17 @@
+import Image from "next/image";
 import { SignIn } from "@clerk/nextjs";
 
 export default function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6">
+      <Image
+        src="/logo.png"
+        alt="Ghost Hunter"
+        width={224}
+        height={122}
+        priority
+        className="h-16 w-auto"
+      />
       <SignIn />
     </div>
   );
