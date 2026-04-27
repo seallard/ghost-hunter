@@ -1,7 +1,13 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
+import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { ApplicationsTable } from "@/components/applications-table";
-import { getEventsForApplications, listApplications } from "@/lib/applications";
+import {
+  getApplicationCountsByDay,
+  getEventsForApplications,
+  listApplications,
+} from "@/lib/applications";
+import { buildHeatmap } from "@/lib/applications-heatmap";
 
 export default async function Home() {
   const user = await currentUser();
@@ -11,6 +17,8 @@ export default async function Home() {
     user.id,
     applications.map((a) => a.id),
   );
+  const counts = await getApplicationCountsByDay(user.id, 90);
+  const weeks = buildHeatmap(counts, new Date(), 90);
 
   return (
     <main className="flex min-h-screen flex-col">
@@ -18,6 +26,11 @@ export default async function Home() {
         <h1 className="text-lg font-semibold tracking-tight">ghost-hunter</h1>
         <UserButton />
       </header>
+      <section className="border-b px-6 py-6">
+        <div className="mx-auto max-w-4xl">
+          <ActivityHeatmap weeks={weeks} />
+        </div>
+      </section>
       <section className="flex-1 px-6 py-8">
         <ApplicationsTable
           applications={applications}

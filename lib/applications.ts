@@ -2,7 +2,7 @@
 // parameter and filters on it. Never read userId from auth() here — that's
 // the server action's job.
 
-import { and, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gte, inArray, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   applicationEvents,
@@ -31,6 +31,35 @@ export async function listApplications(
     .from(applications)
     .where(eq(applications.userId, userId))
     .orderBy(desc(applications.createdAt));
+}
+
+export async function getApplicationCountsByDay(
+  userId: string,
+  days: number = 90,
+): Promise<Map<string, number>> {
+  const since = new Date(Date.now() - (days - 1) * 86_400_000);
+  const day = sql<string>`(date_trunc('day', ${applications.createdAt} AT TIME ZONE 'UTC'))::date`;
+  const rows = await db
+    .select({
+      day: day.as("day"),
+      count: sql<number>`COUNT(*)::int`.as("count"),
+    })
+    .from(applications)
+    .where(
+      and(eq(applications.userId, userId), gte(applications.createdAt, since)),
+    )
+    .groupBy(day);
+
+  const byDay = new Map<string, number>();
+  for (const row of rows) {
+    const day: unknown = row.day;
+    const key =
+      day instanceof Date
+        ? day.toISOString().slice(0, 10)
+        : String(day).slice(0, 10);
+    byDay.set(key, Number(row.count));
+  }
+  return byDay;
 }
 
 export async function createApplication(

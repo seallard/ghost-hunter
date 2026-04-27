@@ -4,6 +4,7 @@ import {
   changeApplicationStatus,
   createApplication,
   deleteApplication,
+  getApplicationCountsByDay,
   getApplicationEvents,
   getApplicationOwner,
   getCoverLetterKey,
@@ -16,7 +17,7 @@ import {
 
 const PDF = { size: 1234, mime: "application/pdf" } as const;
 import { db } from "./db";
-import { applicationEvents } from "./db/schema";
+import { applicationEvents, applications } from "./db/schema";
 
 describe("listApplications", () => {
   it("returns only rows for the given userId (auth invariant)", async () => {
@@ -414,6 +415,72 @@ describe("setCoverLetterAttachment", () => {
       await setCoverLetterAttachment("user_b", a.id, { key: "k", ...PDF }),
     ).toBeNull();
     expect(await setCoverLetterAttachment("user_b", a.id, null)).toBeNull();
+  });
+});
+
+describe("getApplicationCountsByDay", () => {
+  function dateKeyUTC(d: Date): string {
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  it("groups counts by UTC day, only for the given userId, only within the window", async () => {
+    const now = Date.now();
+    const a1 = await createApplication("user_a", {
+      companyName: "A",
+      role: "X",
+    });
+    const a2 = await createApplication("user_a", {
+      companyName: "B",
+      role: "Y",
+    });
+    const a3 = await createApplication("user_a", {
+      companyName: "C",
+      role: "Z",
+    });
+    const old = await createApplication("user_a", {
+      companyName: "Old",
+      role: "Q",
+    });
+    const other = await createApplication("user_b", {
+      companyName: "Other",
+      role: "P",
+    });
+
+    const today = new Date(now);
+    const yesterday = new Date(now - 86_400_000);
+    const beyond = new Date(now - 100 * 86_400_000);
+
+    await db
+      .update(applications)
+      .set({ createdAt: today })
+      .where(eq(applications.id, a1.id));
+    await db
+      .update(applications)
+      .set({ createdAt: today })
+      .where(eq(applications.id, a2.id));
+    await db
+      .update(applications)
+      .set({ createdAt: yesterday })
+      .where(eq(applications.id, a3.id));
+    await db
+      .update(applications)
+      .set({ createdAt: beyond })
+      .where(eq(applications.id, old.id));
+    await db
+      .update(applications)
+      .set({ createdAt: today })
+      .where(eq(applications.id, other.id));
+
+    const result = await getApplicationCountsByDay("user_a", 90);
+    expect(result.get(dateKeyUTC(today))).toBe(2);
+    expect(result.get(dateKeyUTC(yesterday))).toBe(1);
+    expect(result.has(dateKeyUTC(beyond))).toBe(false);
+
+    const total = Array.from(result.values()).reduce((s, n) => s + n, 0);
+    expect(total).toBe(3);
   });
 });
 
