@@ -341,7 +341,7 @@ export function ApplicationsTable({
           placeholder="Search company or role"
           className="max-w-xs"
         />
-        <div title="Last 90 days of application activity">
+        <div className="ml-auto" title="Last 90 days of application activity">
           <ActivityHeatmap weeks={heatmapWeeks} compact />
         </div>
       </div>
