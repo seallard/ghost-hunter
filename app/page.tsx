@@ -24,7 +24,13 @@ export default async function Home() {
   return (
     <main className="flex min-h-screen flex-col">
       <header className="flex items-center justify-between border-b px-6 py-3">
-        <Link href="/" aria-label="Ghost Hunter — home">
+        <Link
+          href="/"
+          aria-label="Ghost Hunter — home"
+          className="flex items-center gap-2"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="" aria-hidden="true" className="h-8 w-8" />
           <h1 className="text-lg font-semibold tracking-tight">Ghost Hunter</h1>
         </Link>
         <UserButton />
