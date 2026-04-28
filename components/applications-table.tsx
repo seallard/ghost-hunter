@@ -43,11 +43,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { RelativeTime } from "@/components/relative-time";
 import {
   ApplicationDetail,
   type FieldKey as DetailFieldKey,
 } from "@/components/application-detail";
+import type { HeatmapWeek } from "@/lib/applications-heatmap";
 import type { ApplicationWithActivity } from "@/lib/applications";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 import {
@@ -147,9 +149,11 @@ function reduceEvents(
 export function ApplicationsTable({
   applications,
   eventsByApp,
+  heatmapWeeks,
 }: {
   applications: ApplicationWithActivity[];
   eventsByApp: Map<string, ApplicationEvent[]>;
+  heatmapWeeks: HeatmapWeek[];
 }) {
   const [adding, setAdding] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -356,6 +360,9 @@ export function ApplicationsTable({
               </button>
             );
           })}
+        </div>
+        <div className="ml-auto" title="Last 90 days of application activity">
+          <ActivityHeatmap weeks={heatmapWeeks} compact />
         </div>
       </div>
       <Table>

@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
-import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { ApplicationsSankey } from "@/components/applications-sankey";
 import { ApplicationsTable } from "@/components/applications-table";
 import {
@@ -38,21 +37,17 @@ export default async function Home() {
         </Link>
         <UserButton />
       </header>
-      <section className="border-b px-6 py-6">
-        <div className="mx-auto max-w-4xl">
-          <ActivityHeatmap weeks={weeks} />
-        </div>
-      </section>
-      <section className="border-b px-6 py-6">
-        <div className="mx-auto max-w-4xl">
-          <ApplicationsSankey data={sankey} />
-        </div>
-      </section>
-      <section className="flex-1 px-6 py-8">
+      <section className="px-6 py-8">
         <ApplicationsTable
           applications={applications}
           eventsByApp={eventsByApp}
+          heatmapWeeks={weeks}
         />
+      </section>
+      <section className="flex-1 border-t px-6 py-6">
+        <div className="mx-auto max-w-4xl">
+          <ApplicationsSankey data={sankey} />
+        </div>
       </section>
     </main>
   );

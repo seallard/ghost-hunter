@@ -27,7 +27,36 @@ function tooltipFor(cell: HeatmapCell): string {
   return `${cell.count} ${noun} · ${label}`;
 }
 
-export function ActivityHeatmap({ weeks }: { weeks: HeatmapWeek[] }) {
+export function ActivityHeatmap({
+  weeks,
+  compact = false,
+}: {
+  weeks: HeatmapWeek[];
+  compact?: boolean;
+}) {
+  if (compact) {
+    return (
+      <div className="flex gap-[2px]" aria-label="90-day application activity">
+        {weeks.map((week, i) => (
+          <div key={i} className="flex flex-col gap-[2px]">
+            {week.cells.map((cell, j) => (
+              <div
+                key={j}
+                title={cell && !cell.isFuture ? tooltipFor(cell) : undefined}
+                className={cn(
+                  "size-2 rounded-[2px]",
+                  cell === null || cell.isFuture
+                    ? "bg-transparent"
+                    : INTENSITY_CLASSES[intensity(cell.count)],
+                )}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex gap-[6px]">
