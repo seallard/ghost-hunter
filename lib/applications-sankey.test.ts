@@ -11,6 +11,7 @@ function app(id: string, status: Application["status"]): Application {
     jobDescription: null,
     jobUrl: null,
     status,
+    workMode: null,
     salary: null,
     contact: null,
     coverLetterText: null,

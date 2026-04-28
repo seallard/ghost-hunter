@@ -11,7 +11,7 @@ import {
   updateApplicationFields,
   updateEventNote,
 } from "@/lib/applications";
-import { applicationStatus } from "@/lib/db/schema";
+import { applicationStatus, workMode } from "@/lib/db/schema";
 import { deleteObject } from "@/lib/storage";
 
 const NewApplicationSchema = z.object({
@@ -79,6 +79,7 @@ const UpdateFieldsSchema = z.object({
   salary: z.string().max(200).nullable().optional(),
   contact: z.string().max(500).nullable().optional(),
   coverLetterText: z.string().max(50_000).nullable().optional(),
+  workMode: z.enum(workMode.enumValues).nullable().optional(),
 });
 
 export type UpdateFieldsResult = { ok: true } | { ok: false; error: string };

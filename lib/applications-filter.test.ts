@@ -22,6 +22,7 @@ function app(
     coverLetterObjectKey: null,
     coverLetterSizeBytes: null,
     coverLetterMime: null,
+    workMode: null,
     createdAt: new Date(0),
     updatedAt: new Date(0),
     ...overrides,

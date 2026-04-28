@@ -10,6 +10,7 @@ import {
   type Application,
   type ApplicationEvent,
 } from "./db/schema";
+import type { WorkMode } from "./applications-work-mode";
 
 export type ApplicationWithActivity = Application & { lastActivityAt: Date };
 
@@ -158,6 +159,7 @@ export async function updateApplicationFields(
     salary?: string | null;
     contact?: string | null;
     coverLetterText?: string | null;
+    workMode?: WorkMode | null;
   },
 ): Promise<Application | null> {
   const [updated] = await db

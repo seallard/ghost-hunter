@@ -59,6 +59,10 @@ import {
   type Status,
 } from "@/lib/applications-status";
 import {
+  WORK_MODE_EMOJIS,
+  WORK_MODE_LABELS,
+} from "@/lib/applications-work-mode";
+import {
   changeApplicationStatusAction,
   clearUploadedFileAction,
   createApplicationAction,
@@ -295,6 +299,7 @@ export function ApplicationsTable({
           jobDescription: null,
           jobUrl: null,
           status: "applied",
+          workMode: null,
           salary: null,
           contact: null,
           coverLetterText: null,
@@ -336,34 +341,32 @@ export function ApplicationsTable({
           placeholder="Search company or role"
           className="max-w-xs"
         />
-        <div className="flex flex-wrap items-center gap-1.5">
-          {STATUSES.map((s) => {
-            const active = statusFilter.has(s);
-            const muted = statusFilter.size > 0 && !active;
-            const count = stats.byStatus[s];
-            return (
-              <button
-                type="button"
-                key={s}
-                onClick={() => toggleStatusFilter(s)}
-                aria-pressed={active}
-                className="cursor-pointer"
-              >
-                <Badge className={cn(STATUS_CLASSES[s], muted && "opacity-40")}>
-                  {STATUS_LABELS[s]}
-                  {count > 0 ? (
-                    <span className="ml-1 tabular-nums opacity-70">
-                      {count}
-                    </span>
-                  ) : null}
-                </Badge>
-              </button>
-            );
-          })}
-        </div>
-        <div className="ml-auto" title="Last 90 days of application activity">
+        <div title="Last 90 days of application activity">
           <ActivityHeatmap weeks={heatmapWeeks} compact />
         </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {STATUSES.map((s) => {
+          const active = statusFilter.has(s);
+          const muted = statusFilter.size > 0 && !active;
+          const count = stats.byStatus[s];
+          return (
+            <button
+              type="button"
+              key={s}
+              onClick={() => toggleStatusFilter(s)}
+              aria-pressed={active}
+              className="cursor-pointer"
+            >
+              <Badge className={cn(STATUS_CLASSES[s], muted && "opacity-40")}>
+                {STATUS_LABELS[s]}
+                {count > 0 ? (
+                  <span className="ml-1 tabular-nums opacity-70">{count}</span>
+                ) : null}
+              </Badge>
+            </button>
+          );
+        })}
       </div>
       <Table>
         <TableHeader>
@@ -501,7 +504,18 @@ export function ApplicationsTable({
                         onCancel={() => setEditing(null)}
                       />
                     ) : (
-                      app.role
+                      <>
+                        {app.workMode ? (
+                          <span
+                            aria-label={WORK_MODE_LABELS[app.workMode]}
+                            title={WORK_MODE_LABELS[app.workMode]}
+                            className="mr-1.5"
+                          >
+                            {WORK_MODE_EMOJIS[app.workMode]}
+                          </span>
+                        ) : null}
+                        {app.role}
+                      </>
                     )}
                   </TableCell>
                   <TableCell onClick={(e) => e.stopPropagation()}>

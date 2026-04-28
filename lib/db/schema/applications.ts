@@ -10,6 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { applicationStatus } from "./status";
+import { workMode } from "./work-mode";
 
 export const applications = pgTable(
   "applications",
@@ -23,6 +24,7 @@ export const applications = pgTable(
     jobDescription: text("job_description"),
     jobUrl: text("job_url"),
     status: applicationStatus("status").notNull(),
+    workMode: workMode("work_mode"),
     salary: text("salary"),
     contact: text("contact"),
     coverLetterText: text("cover_letter_text"),

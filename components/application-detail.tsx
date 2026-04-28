@@ -2,16 +2,28 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ExternalLink, Paperclip, Trash2 } from "lucide-react";
+import { ChevronDown, ExternalLink, Paperclip, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { EventTimeline } from "@/components/event-timeline";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
+import {
+  WORK_MODES,
+  WORK_MODE_EMOJIS,
+  WORK_MODE_LABELS,
+  type WorkMode,
+} from "@/lib/applications-work-mode";
 
 type TextFieldKey = "jobUrl" | "salary" | "contact";
 type TextareaFieldKey = "jobDescription" | "coverLetterText";
-export type FieldKey = TextFieldKey | TextareaFieldKey;
+export type FieldKey = TextFieldKey | TextareaFieldKey | "workMode";
 
 const TEXT_FIELDS: {
   key: TextFieldKey;
@@ -78,6 +90,10 @@ export function ApplicationDetail({
             </label>
           );
         })}
+        <WorkModeField
+          value={application.workMode}
+          onChange={(next) => saveField("workMode", next ?? "")}
+        />
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {TEXTAREA_FIELDS.map(({ key, label }) => (
@@ -216,6 +232,53 @@ function CoverLetterAttachment({
         </Button>
       )}
       {error ? <span className="text-destructive text-xs">{error}</span> : null}
+    </div>
+  );
+}
+
+function WorkModeField({
+  value,
+  onChange,
+}: {
+  value: WorkMode | null;
+  onChange: (next: WorkMode | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 text-sm">
+      <span className="text-muted-foreground font-medium">Work mode</span>
+      <DropdownMenu>
+        <DropdownMenuTrigger className="bg-background border-input hover:bg-muted flex h-9 w-full cursor-pointer items-center justify-between rounded-md border px-3 text-sm">
+          <span>
+            {value ? (
+              <>
+                <span className="mr-1.5">{WORK_MODE_EMOJIS[value]}</span>
+                {WORK_MODE_LABELS[value]}
+              </>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </span>
+          <ChevronDown className="text-muted-foreground size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem
+            disabled={value === null}
+            onClick={() => onChange(null)}
+          >
+            <span className="text-muted-foreground">— Unset</span>
+          </DropdownMenuItem>
+          {WORK_MODES.map((m) => (
+            <DropdownMenuItem
+              key={m}
+              disabled={m === value}
+              onClick={() => onChange(m)}
+            >
+              <span className="mr-1.5">{WORK_MODE_EMOJIS[m]}</span>
+              {WORK_MODE_LABELS[m]}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
