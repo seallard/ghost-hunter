@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildSankey,
-  SUBMITTED_NODE_ID,
-  type SankeyData,
-} from "./applications-sankey";
+import { buildSankey, type SankeyData } from "./applications-sankey";
 import type { Application, ApplicationEvent } from "./db/schema";
 
 function app(id: string, status: Application["status"]): Application {
@@ -56,11 +52,9 @@ describe("buildSankey", () => {
     expect(buildSankey([], new Map())).toEqual({ nodes: [], links: [] });
   });
 
-  it("represents an app stuck at applied as submitted -> applied only", () => {
+  it("returns empty data when no application has any transitions", () => {
     const data = buildSankey([app("1", "applied")], new Map());
-    expect(findLink(data, SUBMITTED_NODE_ID, "applied")).toBe(1);
-    expect(data.links).toHaveLength(1);
-    expect(data.nodes.map((n) => n.id)).toEqual([SUBMITTED_NODE_ID, "applied"]);
+    expect(data).toEqual({ nodes: [], links: [] });
   });
 
   it("walks a forward path through events", () => {
@@ -75,7 +69,6 @@ describe("buildSankey", () => {
       ],
     ]);
     const data = buildSankey([app("1", "offer")], events);
-    expect(findLink(data, SUBMITTED_NODE_ID, "applied")).toBe(1);
     expect(findLink(data, "applied", "screening")).toBe(1);
     expect(findLink(data, "screening", "interviewing")).toBe(1);
     expect(findLink(data, "interviewing", "offer")).toBe(1);
@@ -98,7 +91,6 @@ describe("buildSankey", () => {
       ["b", [event("b", "rejected", new Date(2))]],
     ]);
     const data = buildSankey(apps, events);
-    expect(findLink(data, SUBMITTED_NODE_ID, "applied")).toBe(3);
     expect(findLink(data, "applied", "screening")).toBe(1);
     expect(findLink(data, "screening", "interviewing")).toBe(1);
     expect(findLink(data, "applied", "rejected")).toBe(1);

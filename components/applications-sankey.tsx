@@ -2,15 +2,11 @@
 
 import { ResponsiveSankey } from "@nivo/sankey";
 import { STATUS_LABELS } from "@/lib/applications-status";
-import { SUBMITTED_NODE_ID, type SankeyData } from "@/lib/applications-sankey";
+import { type SankeyData } from "@/lib/applications-sankey";
 
-const NODE_LABELS: Record<string, string> = {
-  [SUBMITTED_NODE_ID]: "Submitted",
-  ...STATUS_LABELS,
-};
+const NODE_LABELS: Record<string, string> = { ...STATUS_LABELS };
 
 const NODE_COLORS: Record<string, string> = {
-  [SUBMITTED_NODE_ID]: "#94a3b8", // slate-400
   applied: "#64748b", // slate-500
   screening: "#0ea5e9", // sky-500
   interviewing: "#6366f1", // indigo-500

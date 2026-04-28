@@ -1,8 +1,6 @@
 import type { Application, ApplicationEvent } from "./db/schema";
 import type { Status } from "./applications-status";
 
-export const SUBMITTED_NODE_ID = "submitted";
-
 export interface SankeyNode {
   id: string;
 }
@@ -21,8 +19,7 @@ export interface SankeyData {
 // Rank enforces a DAG so Nivo Sankey doesn't choke on cycles. Backward moves
 // (e.g. a manual correction from "rejected" back to "interviewing") are
 // dropped — they're rare and would otherwise create cycles.
-const RANK: Record<Status | typeof SUBMITTED_NODE_ID, number> = {
-  submitted: -1,
+const RANK: Record<Status, number> = {
   applied: 0,
   screening: 1,
   interviewing: 2,
@@ -48,11 +45,6 @@ export function buildSankey(
     usedNodes.add(source);
     usedNodes.add(target);
   };
-
-  bump(SUBMITTED_NODE_ID, "applied");
-  // Synthetic edge weight: every app contributes 1, regardless of further
-  // movement. linkCounts already has this baseline.
-  linkCounts.set(`${SUBMITTED_NODE_ID}|applied`, applications.length);
 
   for (const app of applications) {
     const events = [...(eventsByApp.get(app.id) ?? [])].sort(
