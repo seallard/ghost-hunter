@@ -9,12 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EventTimeline } from "@/components/event-timeline";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 
-type TextFieldKey =
-  | "jobUrl"
-  | "salary"
-  | "contactName"
-  | "contactEmail"
-  | "contactUrl";
+type TextFieldKey = "jobUrl" | "salary" | "contact";
 type TextareaFieldKey = "jobDescription" | "coverLetterText";
 export type FieldKey = TextFieldKey | TextareaFieldKey;
 
@@ -26,9 +21,7 @@ const TEXT_FIELDS: {
 }[] = [
   { key: "jobUrl", label: "Job posting URL", type: "url", isLink: true },
   { key: "salary", label: "Salary" },
-  { key: "contactName", label: "Contact name" },
-  { key: "contactEmail", label: "Contact email", type: "email" },
-  { key: "contactUrl", label: "Contact URL", type: "url", isLink: true },
+  { key: "contact", label: "Contact" },
 ];
 
 const TEXTAREA_FIELDS: { key: TextareaFieldKey; label: string }[] = [

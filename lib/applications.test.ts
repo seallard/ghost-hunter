@@ -230,15 +230,11 @@ describe("updateApplicationFields", () => {
     const updated = await updateApplicationFields("user_a", a.id, {
       jobUrl: "https://example.com/job/123",
       salary: "$120-150k",
-      contactName: "Sarah",
-      contactEmail: "sarah@example.com",
-      contactUrl: "https://linkedin.com/in/sarah",
+      contact: "Sarah <sarah@example.com>",
     });
     expect(updated?.jobUrl).toBe("https://example.com/job/123");
     expect(updated?.salary).toBe("$120-150k");
-    expect(updated?.contactName).toBe("Sarah");
-    expect(updated?.contactEmail).toBe("sarah@example.com");
-    expect(updated?.contactUrl).toBe("https://linkedin.com/in/sarah");
+    expect(updated?.contact).toBe("Sarah <sarah@example.com>");
   });
 
   it("clears nullable fields when passed null", async () => {

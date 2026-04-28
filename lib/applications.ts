@@ -156,9 +156,7 @@ export async function updateApplicationFields(
     jobDescription?: string | null;
     jobUrl?: string | null;
     salary?: string | null;
-    contactName?: string | null;
-    contactEmail?: string | null;
-    contactUrl?: string | null;
+    contact?: string | null;
     coverLetterText?: string | null;
   },
 ): Promise<Application | null> {
