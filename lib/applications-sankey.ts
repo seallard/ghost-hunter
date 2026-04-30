@@ -9,6 +9,7 @@ export interface SankeyLink {
   source: string;
   target: string;
   value: number;
+  appIds: string[];
 }
 
 export interface SankeyData {
@@ -36,12 +37,18 @@ export function buildSankey(
 ): SankeyData {
   if (applications.length === 0) return { nodes: [], links: [] };
 
-  const linkCounts = new Map<string, number>();
+  const linkData = new Map<string, { value: number; appIds: string[] }>();
   const usedNodes = new Set<string>();
 
-  const bump = (source: string, target: string) => {
+  const bump = (source: string, target: string, appId: string) => {
     const key = `${source}|${target}`;
-    linkCounts.set(key, (linkCounts.get(key) ?? 0) + 1);
+    const existing = linkData.get(key);
+    if (existing) {
+      existing.value += 1;
+      existing.appIds.push(appId);
+    } else {
+      linkData.set(key, { value: 1, appIds: [appId] });
+    }
     usedNodes.add(source);
     usedNodes.add(target);
   };
@@ -53,7 +60,7 @@ export function buildSankey(
     let prev: Status = "applied";
     for (const ev of events) {
       if (RANK[ev.status] <= RANK[prev]) continue;
-      bump(prev, ev.status);
+      bump(prev, ev.status, app.id);
       prev = ev.status;
     }
   }
@@ -62,10 +69,12 @@ export function buildSankey(
     .sort((a, b) => RANK[a as Status] - RANK[b as Status])
     .map((id) => ({ id }));
 
-  const links = Array.from(linkCounts.entries()).map(([key, value]) => {
-    const [source, target] = key.split("|");
-    return { source, target, value };
-  });
+  const links = Array.from(linkData.entries()).map(
+    ([key, { value, appIds }]) => {
+      const [source, target] = key.split("|");
+      return { source, target, value, appIds };
+    },
+  );
 
   return { nodes, links };
 }

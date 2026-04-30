@@ -165,10 +165,14 @@ export function ApplicationsTable({
   applications,
   eventsByApp,
   heatmapWeeks,
+  search,
+  onSearchChange,
 }: {
   applications: ApplicationWithActivity[];
   eventsByApp: Map<string, ApplicationEvent[]>;
   heatmapWeeks: HeatmapWeek[];
+  search: string;
+  onSearchChange: (next: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [newCompanyDraft, setNewCompanyDraft] = useState("");
@@ -177,7 +181,6 @@ export function ApplicationsTable({
     id: string;
     field: EditableField;
   } | null>(null);
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ReadonlySet<Status>>(
     new Set(),
   );
@@ -197,7 +200,7 @@ export function ApplicationsTable({
   }
 
   function clearFilters() {
-    setSearch("");
+    onSearchChange("");
     setStatusFilter(new Set());
   }
 
@@ -361,7 +364,7 @@ export function ApplicationsTable({
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={search}
-          onChange={(e) => setSearch(e.currentTarget.value)}
+          onChange={(e) => onSearchChange(e.currentTarget.value)}
           placeholder="Search company or role"
           className="max-w-xs"
         />

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { UserButton } from "@clerk/nextjs";
-import { ApplicationsSankey } from "@/components/applications-sankey";
-import { ApplicationsTable } from "@/components/applications-table";
+import { DashboardClient } from "@/components/dashboard-client";
 import {
   getApplicationCountsByDay,
   getEventsForApplications,
@@ -37,18 +36,12 @@ export default async function Home() {
         </Link>
         <UserButton />
       </header>
-      <section className="px-6 py-8">
-        <ApplicationsTable
-          applications={applications}
-          eventsByApp={eventsByApp}
-          heatmapWeeks={weeks}
-        />
-      </section>
-      <section className="flex-1 border-t px-6 py-6">
-        <div className="mx-auto max-w-4xl">
-          <ApplicationsSankey data={sankey} />
-        </div>
-      </section>
+      <DashboardClient
+        applications={applications}
+        eventsByApp={eventsByApp}
+        heatmapWeeks={weeks}
+        sankey={sankey}
+      />
     </main>
   );
 }

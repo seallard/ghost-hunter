@@ -99,6 +99,20 @@ describe("buildSankey", () => {
     expect(findLink(data, "applied", "rejected")).toBe(1);
   });
 
+  it("records the contributing app IDs on each link", () => {
+    const apps = [app("a", "screening"), app("b", "screening")];
+    const events = new Map<string, ApplicationEvent[]>([
+      ["a", [event("a", "screening", new Date(2))]],
+      ["b", [event("b", "screening", new Date(2))]],
+    ]);
+    const data = buildSankey(apps, events);
+    const link = data.links.find(
+      (l) => l.source === "applied" && l.target === "screening",
+    );
+    expect(link?.value).toBe(2);
+    expect(link?.appIds.sort()).toEqual(["a", "b"]);
+  });
+
   it("drops backward transitions to keep the graph acyclic", () => {
     const events = new Map<string, ApplicationEvent[]>([
       [

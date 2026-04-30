@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { STATUS_LABELS } from "@/lib/applications-status";
 import { type SankeyData } from "@/lib/applications-sankey";
@@ -17,7 +18,25 @@ const NODE_COLORS: Record<string, string> = {
   ghosted: "#78716c", // stone-500
 };
 
-export function ApplicationsSankey({ data }: { data: SankeyData }) {
+const MUTED_COLOR = "#94a3b8"; // slate-400
+
+export function ApplicationsSankey({
+  data,
+  highlightAppIds,
+}: {
+  data: SankeyData;
+  highlightAppIds?: ReadonlySet<string>;
+}) {
+  const renderedData = useMemo(() => {
+    if (!highlightAppIds || highlightAppIds.size === 0) return data;
+    const links = data.links.map((link) => {
+      const matches = link.appIds.some((id) => highlightAppIds.has(id));
+      if (matches) return link;
+      return { ...link, startColor: MUTED_COLOR, endColor: MUTED_COLOR };
+    });
+    return { nodes: data.nodes, links };
+  }, [data, highlightAppIds]);
+
   if (data.nodes.length === 0) {
     return (
       <div className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
@@ -29,7 +48,7 @@ export function ApplicationsSankey({ data }: { data: SankeyData }) {
   return (
     <div className="h-[360px]">
       <ResponsiveSankey
-        data={data}
+        data={renderedData}
         margin={{ top: 16, right: 110, bottom: 16, left: 110 }}
         align="justify"
         colors={(node) => NODE_COLORS[node.id] ?? "#94a3b8"}
