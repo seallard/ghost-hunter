@@ -7,7 +7,14 @@ import {
   useState,
   useTransition,
 } from "react";
-import { ArrowDown, ArrowUp, ChevronRight, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronRight,
+  Ghost,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   applyFilter,
@@ -188,7 +195,7 @@ export function ApplicationsTable({
     key: "lastActivityAt",
     dir: "desc",
   });
-  const [, startTransition] = useTransition();
+  const [isPending, startTransition] = useTransition();
 
   function toggleStatusFilter(s: Status) {
     setStatusFilter((prev) => {
@@ -366,252 +373,293 @@ export function ApplicationsTable({
         </div>
       </div>
       <UpcomingInterviews items={upcomingInterviews} onSelect={setExpandedId} />
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={search}
-          onChange={(e) => onSearchChange(e.currentTarget.value)}
-          placeholder="Search company or role"
-          className="max-w-xs"
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {STATUSES.map((s) => {
-          const active = statusFilter.has(s);
-          const muted = statusFilter.size > 0 && !active;
-          const count = stats.byStatus[s];
-          return (
-            <button
-              type="button"
-              key={s}
-              onClick={() => toggleStatusFilter(s)}
-              aria-pressed={active}
-              className="cursor-pointer"
-            >
-              <Badge className={cn(STATUS_CLASSES[s], muted && "opacity-40")}>
-                {STATUS_LABELS[s]}
-                {count > 0 ? (
-                  <span className="ml-1 tabular-nums opacity-70">{count}</span>
-                ) : null}
-              </Badge>
-            </button>
-          );
-        })}
-      </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-10" />
-            <SortableHeader
-              label="Company"
-              sortKey="companyName"
-              sort={sort}
-              onSortChange={setSort}
-              className="w-[35%]"
+      {optimisticApps.length === 0 && !adding ? (
+        <div className="bg-muted/30 rounded-lg border border-dashed px-6 py-10 text-center">
+          <Ghost
+            className="text-muted-foreground mx-auto size-10"
+            aria-hidden
+          />
+          <h2 className="mt-3 text-base font-semibold">No applications yet</h2>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Track your first job application to see your timeline take shape.
+          </p>
+          <Button
+            className="mt-4"
+            onClick={() => {
+              setNewCompanyDraft("");
+              setAdding(true);
+            }}
+          >
+            <Plus className="size-4" />
+            Add your first application
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={search}
+              onChange={(e) => onSearchChange(e.currentTarget.value)}
+              placeholder="Search company or role"
+              className="max-w-xs"
             />
-            <SortableHeader
-              label="Role"
-              sortKey="role"
-              sort={sort}
-              onSortChange={setSort}
-              className="w-[30%]"
-            />
-            <SortableHeader
-              label="Status"
-              sortKey="status"
-              sort={sort}
-              onSortChange={setSort}
-              className="w-[15%]"
-            />
-            <SortableHeader
-              label="Last update"
-              sortKey="lastActivityAt"
-              sort={sort}
-              onSortChange={setSort}
-              className="w-[20%]"
-            />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {adding ? (
-            <NewRow
-              onSubmit={handleCreate}
-              onDone={() => {
-                setAdding(false);
-                setNewCompanyDraft("");
-              }}
-              companyValue={newCompanyDraft}
-              onCompanyChange={setNewCompanyDraft}
-            />
-          ) : (
-            <TableRow>
-              <TableCell colSpan={COLS} className="p-0">
-                <Button
-                  variant="ghost"
-                  className="text-muted-foreground hover:text-foreground h-10 w-full justify-start rounded-none px-2 font-normal"
-                  onClick={() => {
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {STATUSES.map((s) => {
+              const active = statusFilter.has(s);
+              const muted = statusFilter.size > 0 && !active;
+              const count = stats.byStatus[s];
+              return (
+                <button
+                  type="button"
+                  key={s}
+                  onClick={() => toggleStatusFilter(s)}
+                  aria-pressed={active}
+                  className="cursor-pointer"
+                >
+                  <Badge
+                    className={cn(STATUS_CLASSES[s], muted && "opacity-40")}
+                  >
+                    {STATUS_LABELS[s]}
+                    {count > 0 ? (
+                      <span className="ml-1 tabular-nums opacity-70">
+                        {count}
+                      </span>
+                    ) : null}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10" />
+                <SortableHeader
+                  label="Company"
+                  sortKey="companyName"
+                  sort={sort}
+                  onSortChange={setSort}
+                  className="w-[35%]"
+                />
+                <SortableHeader
+                  label="Role"
+                  sortKey="role"
+                  sort={sort}
+                  onSortChange={setSort}
+                  className="hidden w-[30%] sm:table-cell"
+                />
+                <SortableHeader
+                  label="Status"
+                  sortKey="status"
+                  sort={sort}
+                  onSortChange={setSort}
+                  className="w-[15%]"
+                />
+                <SortableHeader
+                  label="Last update"
+                  sortKey="lastActivityAt"
+                  sort={sort}
+                  onSortChange={setSort}
+                  className="w-[20%]"
+                />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {adding ? (
+                <NewRow
+                  onSubmit={handleCreate}
+                  onDone={() => {
+                    setAdding(false);
                     setNewCompanyDraft("");
-                    setAdding(true);
                   }}
-                >
-                  <Plus className="size-4" />
-                  Add application
-                </Button>
-              </TableCell>
-            </TableRow>
-          )}
-          {visibleApps.length === 0 && optimisticApps.length > 0 ? (
-            <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={COLS}
-                className="text-muted-foreground py-6 text-center text-sm"
-              >
-                No applications match these filters.{" "}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-foreground h-auto px-2 py-0.5"
-                >
-                  Clear filters
-                </Button>
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {visibleApps.map((app) => {
-            const expanded = expandedId === app.id;
-            const isEditingCompany =
-              editing?.id === app.id && editing.field === "companyName";
-            const isEditingRole =
-              editing?.id === app.id && editing.field === "role";
-            return (
-              <Fragment key={app.id}>
-                <TableRow
-                  data-state={expanded ? "selected" : undefined}
-                  className="group cursor-pointer"
-                  onClick={() =>
-                    setExpandedId((id) => (id === app.id ? null : app.id))
-                  }
-                >
-                  <TableCell className="text-muted-foreground w-10 px-3">
-                    <ChevronRight
-                      className={cn(
-                        "size-4 transition-transform",
-                        expanded && "rotate-90",
-                      )}
-                      aria-hidden
-                    />
-                  </TableCell>
-                  <TableCell
-                    className="font-medium"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!isEditingCompany) {
-                        setEditing({ id: app.id, field: "companyName" });
-                      }
-                    }}
-                  >
-                    {isEditingCompany ? (
-                      <InlineEditInput
-                        defaultValue={app.companyName}
-                        onCommit={(value) =>
-                          handleFieldEdit(
-                            app.id,
-                            "companyName",
-                            value,
-                            app.companyName,
-                          )
-                        }
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : (
-                      app.companyName
-                    )}
-                  </TableCell>
-                  <TableCell
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!isEditingRole) {
-                        setEditing({ id: app.id, field: "role" });
-                      }
-                    }}
-                  >
-                    {isEditingRole ? (
-                      <InlineEditInput
-                        defaultValue={app.role}
-                        onCommit={(value) =>
-                          handleFieldEdit(app.id, "role", value, app.role)
-                        }
-                        onCancel={() => setEditing(null)}
-                      />
-                    ) : (
-                      <>
-                        {app.workMode ? (
-                          <span
-                            aria-label={WORK_MODE_LABELS[app.workMode]}
-                            title={WORK_MODE_LABELS[app.workMode]}
-                            className="mr-1.5"
-                          >
-                            {WORK_MODE_EMOJIS[app.workMode]}
-                          </span>
-                        ) : null}
-                        {app.role}
-                      </>
-                    )}
-                  </TableCell>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger className="cursor-pointer">
-                        <Badge className={STATUS_CLASSES[app.status]}>
-                          {STATUS_LABELS[app.status]}
-                        </Badge>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {STATUSES.map((s) => (
-                          <DropdownMenuItem
-                            key={s}
-                            disabled={s === app.status}
-                            onClick={() => handleStatusChange(app.id, s)}
-                          >
-                            {STATUS_LABELS[s]}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    <div className="flex items-center justify-between gap-2">
-                      <RelativeTime date={app.lastActivityAt} />
-                      <DeleteButton
-                        company={app.companyName}
-                        onConfirm={() => handleDelete(app.id)}
-                      />
-                    </div>
+                  companyValue={newCompanyDraft}
+                  onCompanyChange={setNewCompanyDraft}
+                />
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={COLS} className="p-0">
+                    <Button
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-foreground h-10 w-full justify-start rounded-none px-2 font-normal"
+                      onClick={() => {
+                        setNewCompanyDraft("");
+                        setAdding(true);
+                      }}
+                    >
+                      <Plus className="size-4" />
+                      Add application
+                    </Button>
                   </TableCell>
                 </TableRow>
-                {expanded ? (
-                  <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={COLS} className="p-0 whitespace-normal">
-                      <ApplicationDetail
-                        application={app}
-                        events={optimisticEvents.get(app.id) ?? []}
-                        onSaveField={(key, value) =>
-                          handleSaveDetailField(app.id, key, value)
-                        }
-                        onClearCoverLetter={() =>
-                          handleClearCoverLetter(app.id)
-                        }
-                        onSaveEvent={(eventId, fields) =>
-                          handleSaveEvent(app.id, eventId, fields)
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ) : null}
-              </Fragment>
-            );
-          })}
-        </TableBody>
-      </Table>
+              )}
+              {visibleApps.length === 0 && optimisticApps.length > 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={COLS}
+                    className="text-muted-foreground py-6 text-center text-sm"
+                  >
+                    No applications match these filters.{" "}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-foreground h-auto px-2 py-0.5"
+                    >
+                      Clear filters
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : null}
+              {visibleApps.map((app) => {
+                const expanded = expandedId === app.id;
+                const isEditingCompany =
+                  editing?.id === app.id && editing.field === "companyName";
+                const isEditingRole =
+                  editing?.id === app.id && editing.field === "role";
+                return (
+                  <Fragment key={app.id}>
+                    <TableRow
+                      data-state={expanded ? "selected" : undefined}
+                      className="group cursor-pointer"
+                      onClick={() =>
+                        setExpandedId((id) => (id === app.id ? null : app.id))
+                      }
+                    >
+                      <TableCell className="text-muted-foreground w-10 px-3">
+                        <ChevronRight
+                          className={cn(
+                            "size-4 transition-transform",
+                            expanded && "rotate-90",
+                          )}
+                          aria-hidden
+                        />
+                      </TableCell>
+                      <TableCell
+                        className="font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isEditingCompany) {
+                            setEditing({ id: app.id, field: "companyName" });
+                          }
+                        }}
+                      >
+                        {isEditingCompany ? (
+                          <InlineEditInput
+                            defaultValue={app.companyName}
+                            onCommit={(value) =>
+                              handleFieldEdit(
+                                app.id,
+                                "companyName",
+                                value,
+                                app.companyName,
+                              )
+                            }
+                            onCancel={() => setEditing(null)}
+                          />
+                        ) : (
+                          app.companyName
+                        )}
+                      </TableCell>
+                      <TableCell
+                        className="hidden sm:table-cell"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isEditingRole) {
+                            setEditing({ id: app.id, field: "role" });
+                          }
+                        }}
+                      >
+                        {isEditingRole ? (
+                          <InlineEditInput
+                            defaultValue={app.role}
+                            onCommit={(value) =>
+                              handleFieldEdit(app.id, "role", value, app.role)
+                            }
+                            onCancel={() => setEditing(null)}
+                          />
+                        ) : (
+                          <>
+                            {app.workMode ? (
+                              <span
+                                aria-label={WORK_MODE_LABELS[app.workMode]}
+                                title={WORK_MODE_LABELS[app.workMode]}
+                                className="mr-1.5"
+                              >
+                                {WORK_MODE_EMOJIS[app.workMode]}
+                              </span>
+                            ) : null}
+                            {app.role}
+                          </>
+                        )}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            disabled={isPending}
+                            className={cn(
+                              "cursor-pointer",
+                              isPending && "cursor-wait opacity-70",
+                            )}
+                          >
+                            <Badge className={STATUS_CLASSES[app.status]}>
+                              {STATUS_LABELS[app.status]}
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {STATUSES.map((s) => (
+                              <DropdownMenuItem
+                                key={s}
+                                disabled={s === app.status}
+                                onClick={() => handleStatusChange(app.id, s)}
+                              >
+                                {STATUS_LABELS[s]}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex items-center justify-end gap-2 sm:justify-between">
+                          <span className="hidden sm:inline">
+                            <RelativeTime date={app.lastActivityAt} />
+                          </span>
+                          <DeleteButton
+                            company={app.companyName}
+                            onConfirm={() => handleDelete(app.id)}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {expanded ? (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell
+                          colSpan={COLS}
+                          className="p-0 whitespace-normal"
+                        >
+                          <ApplicationDetail
+                            application={app}
+                            events={optimisticEvents.get(app.id) ?? []}
+                            onSaveField={(key, value) =>
+                              handleSaveDetailField(app.id, key, value)
+                            }
+                            onClearCoverLetter={() =>
+                              handleClearCoverLetter(app.id)
+                            }
+                            onSaveEvent={(eventId, fields) =>
+                              handleSaveEvent(app.id, eventId, fields)
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </>
+      )}
     </div>
   );
 }
@@ -652,7 +700,7 @@ function SortableHeader({
       <button
         type="button"
         onClick={handleClick}
-        className="hover:text-foreground inline-flex items-center gap-1 transition-colors"
+        className="hover:bg-muted/40 hover:text-foreground -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 transition-colors"
       >
         {label}
         {active ? (
@@ -714,7 +762,7 @@ function DeleteButton({
               props.onClick?.(e);
             }}
             aria-label={`Delete ${company}`}
-            className="text-muted-foreground hover:text-destructive rounded p-1 opacity-0 transition-opacity group-hover:opacity-100 data-popup-open:opacity-100"
+            className="text-muted-foreground hover:text-destructive rounded p-1 opacity-30 transition-opacity group-hover:opacity-100 data-popup-open:opacity-100"
           >
             <Trash2 className="size-4" />
           </button>

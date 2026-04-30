@@ -27,7 +27,14 @@ export function EventTimeline({
   onSaveEvent: (eventId: string, fields: EventFieldsUpdate) => void;
 }) {
   if (events.length === 0) {
-    return <p className="text-muted-foreground text-sm">No events yet.</p>;
+    return (
+      <div className="bg-muted/20 rounded-md border border-dashed p-4 text-sm">
+        <p className="text-muted-foreground">
+          No events yet. Change the application&rsquo;s status from the dropdown
+          above to log an event.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -125,7 +132,7 @@ function InterviewEditor({
               event.scheduledAt ? toDatetimeLocalValue(event.scheduledAt) : ""
             }
             onBlur={(e) => handleScheduledChange(e.currentTarget.value)}
-            className="border-input bg-background text-foreground h-8 rounded-md border px-2 text-sm"
+            className="border-input bg-background text-foreground h-9 rounded-md border px-2 text-sm"
             aria-label="Scheduled time"
           />
           {event.scheduledAt ? (
