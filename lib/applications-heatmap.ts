@@ -84,10 +84,25 @@ export function buildHeatmap(
   return weeks;
 }
 
-export function intensity(count: number): 0 | 1 | 2 | 3 | 4 {
+export function maxCount(weeks: HeatmapWeek[]): number {
+  let max = 0;
+  for (const week of weeks) {
+    for (const cell of week.cells) {
+      if (cell && !cell.isFuture && cell.count > max) max = cell.count;
+    }
+  }
+  return max;
+}
+
+// Bucketing relative to the user's busiest day so the gradient stays
+// readable whether they applied to 3 jobs in a day or 30. GitHub uses
+// the same approach for its contribution graph.
+export function intensity(count: number, max: number): 0 | 1 | 2 | 3 | 4 {
   if (count <= 0) return 0;
-  if (count === 1) return 1;
-  if (count === 2) return 2;
-  if (count <= 4) return 3;
+  if (max <= 1) return 4;
+  const ratio = count / max;
+  if (ratio <= 0.25) return 1;
+  if (ratio <= 0.5) return 2;
+  if (ratio <= 0.75) return 3;
   return 4;
 }

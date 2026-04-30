@@ -85,13 +85,24 @@ describe("buildHeatmap", () => {
 });
 
 describe("intensity", () => {
-  it("buckets counts into 0-4", () => {
-    expect(intensity(0)).toBe(0);
-    expect(intensity(1)).toBe(1);
-    expect(intensity(2)).toBe(2);
-    expect(intensity(3)).toBe(3);
-    expect(intensity(4)).toBe(3);
-    expect(intensity(5)).toBe(4);
-    expect(intensity(100)).toBe(4);
+  it("returns 0 for no activity regardless of max", () => {
+    expect(intensity(0, 10)).toBe(0);
+    expect(intensity(0, 0)).toBe(0);
+  });
+
+  it("buckets by quartiles of the busiest day", () => {
+    const max = 12;
+    expect(intensity(1, max)).toBe(1); // 8% → q1
+    expect(intensity(3, max)).toBe(1); // 25% → q1
+    expect(intensity(4, max)).toBe(2); // 33% → q2
+    expect(intensity(6, max)).toBe(2); // 50% → q2
+    expect(intensity(7, max)).toBe(3); // 58% → q3
+    expect(intensity(9, max)).toBe(3); // 75% → q3
+    expect(intensity(10, max)).toBe(4); // 83% → q4
+    expect(intensity(12, max)).toBe(4); // 100% → q4
+  });
+
+  it("treats every active day as max color when max is 1", () => {
+    expect(intensity(1, 1)).toBe(4);
   });
 });

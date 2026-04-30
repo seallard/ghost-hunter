@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import {
   intensity,
+  maxCount,
   type HeatmapCell,
   type HeatmapWeek,
 } from "@/lib/applications-heatmap";
@@ -34,6 +35,7 @@ export function ActivityHeatmap({
   weeks: HeatmapWeek[];
   compact?: boolean;
 }) {
+  const max = maxCount(weeks);
   if (compact) {
     return (
       <div className="flex gap-[2px]" aria-label="90-day application activity">
@@ -47,7 +49,7 @@ export function ActivityHeatmap({
                   "size-2 rounded-[2px]",
                   cell === null || cell.isFuture
                     ? "bg-transparent"
-                    : INTENSITY_CLASSES[intensity(cell.count)],
+                    : INTENSITY_CLASSES[intensity(cell.count, max)],
                 )}
               />
             ))}
@@ -88,7 +90,7 @@ export function ActivityHeatmap({
                       "size-3 rounded-[3px]",
                       cell === null || cell.isFuture
                         ? "bg-transparent"
-                        : INTENSITY_CLASSES[intensity(cell.count)],
+                        : INTENSITY_CLASSES[intensity(cell.count, max)],
                     )}
                   />
                 ))}
