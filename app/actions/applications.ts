@@ -9,9 +9,9 @@ import {
   deleteApplication,
   setCoverLetterAttachment,
   updateApplicationFields,
-  updateEventNote,
+  updateEvent,
 } from "@/lib/applications";
-import { applicationStatus, workMode } from "@/lib/db/schema";
+import { applicationStatus, interviewFormat, workMode } from "@/lib/db/schema";
 import { deleteObject } from "@/lib/storage";
 
 const NewApplicationSchema = z.object({
@@ -101,27 +101,26 @@ export async function updateApplicationFieldsAction(
   return { ok: true };
 }
 
-const UpdateNoteSchema = z.object({
+const UpdateEventSchema = z.object({
   eventId: z.string().uuid(),
-  note: z.string().max(2_000).nullable(),
+  note: z.string().max(2_000).nullable().optional(),
+  scheduledAt: z.coerce.date().nullable().optional(),
+  format: z.enum(interviewFormat.enumValues).nullable().optional(),
 });
 
-export type UpdateNoteResult = { ok: true } | { ok: false; error: string };
+export type UpdateEventResult = { ok: true } | { ok: false; error: string };
 
-export async function updateEventNoteAction(
-  input: z.input<typeof UpdateNoteSchema>,
-): Promise<UpdateNoteResult> {
+export async function updateEventAction(
+  input: z.input<typeof UpdateEventSchema>,
+): Promise<UpdateEventResult> {
   const { userId } = await auth();
   if (!userId) throw new Error("unauthenticated");
 
-  const parsed = UpdateNoteSchema.safeParse(input);
+  const parsed = UpdateEventSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "invalid input" };
 
-  const updated = await updateEventNote(
-    userId,
-    parsed.data.eventId,
-    parsed.data.note,
-  );
+  const { eventId, ...fields } = parsed.data;
+  const updated = await updateEvent(userId, eventId, fields);
   if (!updated) return { ok: false, error: "not found" };
 
   revalidatePath("/");

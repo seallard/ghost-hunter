@@ -241,14 +241,20 @@ export async function setCoverLetterAttachment(
   });
 }
 
-export async function updateEventNote(
+export type InterviewFormat = "phone" | "video" | "onsite";
+
+export async function updateEvent(
   userId: string,
   eventId: string,
-  note: string | null,
+  fields: {
+    note?: string | null;
+    scheduledAt?: Date | null;
+    format?: InterviewFormat | null;
+  },
 ): Promise<ApplicationEvent | null> {
   const [updated] = await db
     .update(applicationEvents)
-    .set({ note })
+    .set(fields)
     .where(
       and(
         eq(applicationEvents.id, eventId),

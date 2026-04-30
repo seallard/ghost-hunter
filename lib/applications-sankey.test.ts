@@ -34,6 +34,8 @@ function event(
     userId: "u",
     status,
     note: null,
+    scheduledAt: null,
+    format: null,
     occurredAt,
     createdAt: occurredAt,
   };

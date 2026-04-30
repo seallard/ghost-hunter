@@ -12,7 +12,7 @@ import {
   listApplications,
   setCoverLetterAttachment,
   updateApplicationFields,
-  updateEventNote,
+  updateEvent,
 } from "./applications";
 
 const PDF = { size: 1234, mime: "application/pdf" } as const;
@@ -255,7 +255,7 @@ describe("updateApplicationFields", () => {
   });
 });
 
-describe("updateEventNote", () => {
+describe("updateEvent", () => {
   it("updates the note for an owned event", async () => {
     const a = await createApplication("user_a", {
       companyName: "Acme",
@@ -264,11 +264,9 @@ describe("updateEventNote", () => {
     await changeApplicationStatus("user_a", a.id, "screening");
     const [event] = await getApplicationEvents("user_a", a.id);
 
-    const updated = await updateEventNote(
-      "user_a",
-      event.id,
-      "phone screen with Sarah",
-    );
+    const updated = await updateEvent("user_a", event.id, {
+      note: "phone screen with Sarah",
+    });
     expect(updated?.note).toBe("phone screen with Sarah");
   });
 
@@ -280,7 +278,7 @@ describe("updateEventNote", () => {
     await changeApplicationStatus("user_a", a.id, "screening");
     const [event] = await getApplicationEvents("user_a", a.id);
 
-    expect(await updateEventNote("user_b", event.id, "x")).toBeNull();
+    expect(await updateEvent("user_b", event.id, { note: "x" })).toBeNull();
   });
 
   it("clears the note when passed null", async () => {
@@ -290,10 +288,27 @@ describe("updateEventNote", () => {
     });
     await changeApplicationStatus("user_a", a.id, "screening");
     const [event] = await getApplicationEvents("user_a", a.id);
-    await updateEventNote("user_a", event.id, "x");
+    await updateEvent("user_a", event.id, { note: "x" });
 
-    const cleared = await updateEventNote("user_a", event.id, null);
+    const cleared = await updateEvent("user_a", event.id, { note: null });
     expect(cleared?.note).toBeNull();
+  });
+
+  it("stores scheduledAt and format on interview events", async () => {
+    const a = await createApplication("user_a", {
+      companyName: "Acme",
+      role: "SWE",
+    });
+    await changeApplicationStatus("user_a", a.id, "interviewing");
+    const [event] = await getApplicationEvents("user_a", a.id);
+
+    const when = new Date("2030-01-15T15:30:00Z");
+    const updated = await updateEvent("user_a", event.id, {
+      scheduledAt: when,
+      format: "video",
+    });
+    expect(updated?.scheduledAt?.toISOString()).toBe(when.toISOString());
+    expect(updated?.format).toBe("video");
   });
 });
 
