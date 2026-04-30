@@ -24,7 +24,7 @@ export default async function Home() {
 
   return (
     <main className="flex min-h-screen flex-col">
-      <header className="grid grid-cols-3 items-center border-b px-6 py-3">
+      <header className="grid grid-cols-3 items-center border-b px-6 py-2">
         <div />
         <Link
           href="/"
