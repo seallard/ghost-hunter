@@ -117,16 +117,23 @@ function InterviewEditor({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          type="datetime-local"
-          defaultValue={
-            event.scheduledAt ? toDatetimeLocalValue(event.scheduledAt) : ""
-          }
-          onBlur={(e) => handleScheduledChange(e.currentTarget.value)}
-          className="border-input bg-background text-foreground h-8 rounded-md border px-2 text-sm"
-          aria-label="Scheduled time"
-        />
+      <div className="flex flex-wrap items-start gap-2">
+        <div className="flex flex-col gap-1">
+          <input
+            type="datetime-local"
+            defaultValue={
+              event.scheduledAt ? toDatetimeLocalValue(event.scheduledAt) : ""
+            }
+            onBlur={(e) => handleScheduledChange(e.currentTarget.value)}
+            className="border-input bg-background text-foreground h-8 rounded-md border px-2 text-sm"
+            aria-label="Scheduled time"
+          />
+          {event.scheduledAt ? (
+            <span className="text-muted-foreground text-xs">
+              {formatScheduledAt(event.scheduledAt)}
+            </span>
+          ) : null}
+        </div>
         <div className="flex items-center gap-1">
           {INTERVIEW_FORMATS.map((f) => {
             const active = event.format === f;
@@ -149,11 +156,6 @@ function InterviewEditor({
             );
           })}
         </div>
-        {event.scheduledAt ? (
-          <span className="text-muted-foreground text-xs">
-            {formatScheduledAt(event.scheduledAt)}
-          </span>
-        ) : null}
       </div>
       {editingNote ? (
         <Textarea
