@@ -69,7 +69,7 @@ export function ApplicationDetail({
         {TEXT_FIELDS.map(({ key, label, type, isLink }) => {
           const value = application[key] ?? "";
           return (
-            <label key={key} className="flex flex-col gap-1.5 text-sm">
+            <label key={key} className="flex min-w-0 flex-col gap-1.5 text-sm">
               <span className="text-muted-foreground font-medium">{label}</span>
               <div className="flex items-center gap-1.5">
                 <Input
@@ -100,7 +100,7 @@ export function ApplicationDetail({
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {TEXTAREA_FIELDS.map(({ key, label }) => (
-          <label key={key} className="flex flex-col gap-1.5 text-sm">
+          <label key={key} className="flex min-w-0 flex-col gap-1.5 text-sm">
             <span className="text-muted-foreground font-medium">{label}</span>
             <Textarea
               defaultValue={application[key] ?? ""}

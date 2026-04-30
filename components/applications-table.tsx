@@ -588,7 +588,7 @@ export function ApplicationsTable({
                 </TableRow>
                 {expanded ? (
                   <TableRow className="hover:bg-transparent">
-                    <TableCell colSpan={COLS} className="p-0">
+                    <TableCell colSpan={COLS} className="p-0 whitespace-normal">
                       <ApplicationDetail
                         application={app}
                         events={optimisticEvents.get(app.id) ?? []}
