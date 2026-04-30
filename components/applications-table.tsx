@@ -68,10 +68,6 @@ import {
   type Status,
 } from "@/lib/applications-status";
 import {
-  WORK_MODE_EMOJIS,
-  WORK_MODE_LABELS,
-} from "@/lib/applications-work-mode";
-import {
   changeApplicationStatusAction,
   clearUploadedFileAction,
   createApplicationAction,
@@ -579,18 +575,7 @@ export function ApplicationsTable({
                             onCancel={() => setEditing(null)}
                           />
                         ) : (
-                          <>
-                            {app.workMode ? (
-                              <span
-                                aria-label={WORK_MODE_LABELS[app.workMode]}
-                                title={WORK_MODE_LABELS[app.workMode]}
-                                className="mr-1.5"
-                              >
-                                {WORK_MODE_EMOJIS[app.workMode]}
-                              </span>
-                            ) : null}
-                            {app.role}
-                          </>
+                          app.role
                         )}
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
