@@ -5,6 +5,7 @@
 import { sql } from "drizzle-orm";
 import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { applications } from "./applications";
+import { interviewFormat } from "./interview-format";
 import { applicationStatus } from "./status";
 
 export const applicationEvents = pgTable(
@@ -19,6 +20,8 @@ export const applicationEvents = pgTable(
     userId: text("user_id").notNull(),
     status: applicationStatus("status").notNull(),
     note: text("note"),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    format: interviewFormat("format"),
     occurredAt: timestamp("occurred_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
