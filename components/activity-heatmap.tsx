@@ -9,9 +9,9 @@ import {
 const INTENSITY_CLASSES: Record<0 | 1 | 2 | 3 | 4, string> = {
   0: "bg-muted",
   1: "bg-green-200 dark:bg-green-900",
-  2: "bg-green-400 dark:bg-green-700",
-  3: "bg-green-600 dark:bg-green-500",
-  4: "bg-green-800 dark:bg-green-300",
+  2: "bg-green-300 dark:bg-green-700",
+  3: "bg-green-400 dark:bg-green-600",
+  4: "bg-green-500 dark:bg-green-500",
 };
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
