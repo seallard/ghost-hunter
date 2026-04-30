@@ -160,6 +160,7 @@ export function ApplicationsTable({
   heatmapWeeks: HeatmapWeek[];
 }) {
   const [adding, setAdding] = useState(false);
+  const [newCompanyDraft, setNewCompanyDraft] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editing, setEditing] = useState<{
     id: string;
@@ -315,11 +316,14 @@ export function ApplicationsTable({
     return createApplicationAction(formData);
   }
 
-  const visibleApps = applyFilter(optimisticApps, {
-    search,
-    statuses: statusFilter,
-    sort,
-  });
+  const draftCompany = newCompanyDraft.trim();
+  const filterByDraft = adding && draftCompany !== "";
+  const visibleApps = applyFilter(
+    optimisticApps,
+    filterByDraft
+      ? { search: draftCompany, statuses: new Set(), sort }
+      : { search, statuses: statusFilter, sort },
+  );
   const stats = computeStats(optimisticApps);
 
   return (
@@ -404,14 +408,25 @@ export function ApplicationsTable({
         </TableHeader>
         <TableBody>
           {adding ? (
-            <NewRow onSubmit={handleCreate} onDone={() => setAdding(false)} />
+            <NewRow
+              onSubmit={handleCreate}
+              onDone={() => {
+                setAdding(false);
+                setNewCompanyDraft("");
+              }}
+              companyValue={newCompanyDraft}
+              onCompanyChange={setNewCompanyDraft}
+            />
           ) : (
             <TableRow>
               <TableCell colSpan={COLS} className="p-0">
                 <Button
                   variant="ghost"
                   className="text-muted-foreground hover:text-foreground h-10 w-full justify-start rounded-none px-2 font-normal"
-                  onClick={() => setAdding(true)}
+                  onClick={() => {
+                    setNewCompanyDraft("");
+                    setAdding(true);
+                  }}
                 >
                   <Plus className="size-4" />
                   Add application
@@ -705,9 +720,13 @@ function DeleteButton({
 function NewRow({
   onSubmit,
   onDone,
+  companyValue,
+  onCompanyChange,
 }: {
   onSubmit: (formData: FormData) => Promise<CreateApplicationResult>;
   onDone: () => void;
+  companyValue: string;
+  onCompanyChange: (value: string) => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [, startTransition] = useTransition();
@@ -757,6 +776,8 @@ function NewRow({
             name="companyName"
             placeholder="Company"
             autoFocus
+            value={companyValue}
+            onChange={(e) => onCompanyChange(e.currentTarget.value)}
             className="w-[35%]"
           />
           <Input name="role" placeholder="Role" className="w-[30%]" />
