@@ -350,15 +350,20 @@ export function ApplicationsTable({
 
   return (
     <div className="mx-auto max-w-4xl space-y-3">
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-semibold tabular-nums">
-          {stats.total}
-        </span>
-        <span className="text-muted-foreground text-sm">
-          application{stats.total === 1 ? "" : "s"}
-          {stats.active > 0 ? <> · {stats.active} active</> : null}
-          {stats.offer > 0 ? <> · {stats.offer} offer</> : null}
-        </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-semibold tabular-nums">
+            {stats.total}
+          </span>
+          <span className="text-muted-foreground text-sm">
+            application{stats.total === 1 ? "" : "s"}
+            {stats.active > 0 ? <> · {stats.active} active</> : null}
+            {stats.offer > 0 ? <> · {stats.offer} offer</> : null}
+          </span>
+        </div>
+        <div className="ml-auto" title="Last 90 days of application activity">
+          <ActivityHeatmap weeks={heatmapWeeks} compact />
+        </div>
       </div>
       <UpcomingInterviews items={upcomingInterviews} onSelect={setExpandedId} />
       <div className="flex flex-wrap items-center gap-2">
@@ -368,9 +373,6 @@ export function ApplicationsTable({
           placeholder="Search company or role"
           className="max-w-xs"
         />
-        <div className="ml-auto" title="Last 90 days of application activity">
-          <ActivityHeatmap weeks={heatmapWeeks} compact />
-        </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {STATUSES.map((s) => {
