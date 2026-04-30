@@ -46,13 +46,16 @@ export function ApplicationDetail({
   events,
   onSaveField,
   onClearCoverLetter,
-  onSaveNote,
+  onSaveEvent,
 }: {
   application: Application;
   events: ApplicationEvent[];
   onSaveField: (key: FieldKey, value: string) => void;
   onClearCoverLetter: () => void;
-  onSaveNote: (eventId: string, note: string | null) => void;
+  onSaveEvent: (
+    eventId: string,
+    fields: Partial<Pick<ApplicationEvent, "note" | "scheduledAt" | "format">>,
+  ) => void;
 }) {
   function saveField(key: FieldKey, value: string) {
     const original = application[key] ?? "";
@@ -116,7 +119,7 @@ export function ApplicationDetail({
       />
       <div className="flex flex-col gap-2">
         <h3 className="text-muted-foreground text-sm font-medium">Timeline</h3>
-        <EventTimeline events={events} onSaveNote={onSaveNote} />
+        <EventTimeline events={events} onSaveEvent={onSaveEvent} />
       </div>
     </div>
   );

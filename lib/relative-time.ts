@@ -22,3 +22,38 @@ export function relativeTime(date: Date | string, now: Date = new Date()) {
   }
   return rtf.format(0, "second");
 }
+
+const SCHEDULED_DAY = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+const SCHEDULED_TIME = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+export function formatScheduledAt(
+  date: Date | string,
+  now: Date = new Date(),
+): string {
+  const then = typeof date === "string" ? new Date(date) : date;
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round(
+    (then.getTime() - startOfToday.getTime()) / 86_400_000,
+  );
+
+  const time = SCHEDULED_TIME.format(then);
+  if (dayDiff === 0) return `Today, ${time}`;
+  if (dayDiff === 1) return `Tomorrow, ${time}`;
+  return `${SCHEDULED_DAY.format(then)}, ${time}`;
+}
+
+export function toDatetimeLocalValue(date: Date): string {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}

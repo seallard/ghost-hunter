@@ -45,11 +45,13 @@ import {
 } from "@/components/ui/table";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { RelativeTime } from "@/components/relative-time";
+import { UpcomingInterviews } from "@/components/upcoming-interviews";
 import {
   ApplicationDetail,
   type FieldKey as DetailFieldKey,
 } from "@/components/application-detail";
 import type { HeatmapWeek } from "@/lib/applications-heatmap";
+import { getUpcomingInterviews } from "@/lib/applications-interviews";
 import type { ApplicationWithActivity } from "@/lib/applications";
 import type { Application, ApplicationEvent } from "@/lib/db/schema";
 import {
@@ -69,7 +71,7 @@ import {
   type CreateApplicationResult,
   deleteApplicationAction,
   updateApplicationFieldsAction,
-  updateEventNoteAction,
+  updateEventAction,
 } from "@/app/actions/applications";
 
 const COLS = 5;
@@ -83,8 +85,17 @@ type AppPatch =
   | { type: "fields"; id: string; fields: Partial<Application> }
   | { type: "clear-cover-letter"; id: string };
 
+type EventFieldsUpdate = Partial<
+  Pick<ApplicationEvent, "note" | "scheduledAt" | "format">
+>;
+
 type EventPatch =
-  | { type: "note"; eventId: string; appId: string; note: string | null }
+  | {
+      type: "fields";
+      eventId: string;
+      appId: string;
+      fields: EventFieldsUpdate;
+    }
   | { type: "add-status"; appId: string; status: Status };
 
 function reduceApps(
@@ -125,14 +136,12 @@ function reduceEvents(
   patch: EventPatch,
 ): Map<string, ApplicationEvent[]> {
   const next = new Map(state);
-  if (patch.type === "note") {
+  if (patch.type === "fields") {
     const list = next.get(patch.appId);
     if (!list) return state;
     next.set(
       patch.appId,
-      list.map((e) =>
-        e.id === patch.eventId ? { ...e, note: patch.note } : e,
-      ),
+      list.map((e) => (e.id === patch.eventId ? { ...e, ...patch.fields } : e)),
     );
     return next;
   }
@@ -143,6 +152,8 @@ function reduceEvents(
     userId: "",
     status: patch.status,
     note: null,
+    scheduledAt: null,
+    format: null,
     occurredAt: new Date(),
     createdAt: new Date(),
   };
@@ -267,11 +278,15 @@ export function ApplicationsTable({
     });
   }
 
-  function handleSaveNote(appId: string, eventId: string, note: string | null) {
+  function handleSaveEvent(
+    appId: string,
+    eventId: string,
+    fields: EventFieldsUpdate,
+  ) {
     startTransition(async () => {
-      applyEventPatch({ type: "note", appId, eventId, note });
-      const result = await updateEventNoteAction({ eventId, note });
-      if (!result.ok) console.error("update note failed", result.error);
+      applyEventPatch({ type: "fields", appId, eventId, fields });
+      const result = await updateEventAction({ eventId, ...fields });
+      if (!result.ok) console.error("update event failed", result.error);
     });
   }
 
@@ -325,6 +340,10 @@ export function ApplicationsTable({
       : { search, statuses: statusFilter, sort },
   );
   const stats = computeStats(optimisticApps);
+  const upcomingInterviews = getUpcomingInterviews(
+    optimisticApps,
+    optimisticEvents,
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-3">
@@ -338,6 +357,7 @@ export function ApplicationsTable({
           {stats.offer > 0 ? <> · {stats.offer} offer</> : null}
         </span>
       </div>
+      <UpcomingInterviews items={upcomingInterviews} onSelect={setExpandedId} />
       <div className="flex flex-wrap items-center gap-2">
         <Input
           value={search}
@@ -575,8 +595,8 @@ export function ApplicationsTable({
                         onClearCoverLetter={() =>
                           handleClearCoverLetter(app.id)
                         }
-                        onSaveNote={(eventId, note) =>
-                          handleSaveNote(app.id, eventId, note)
+                        onSaveEvent={(eventId, fields) =>
+                          handleSaveEvent(app.id, eventId, fields)
                         }
                       />
                     </TableCell>
