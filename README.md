@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="public/logo.svg" alt="Ghost Hunter" width="96" height="96" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/logo-dark.svg">
+    <img src="public/logo.svg" alt="Ghost Hunter" width="96" height="96" />
+  </picture>
 </p>
 
 <h1 align="center">Ghost Hunter</h1>

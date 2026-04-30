@@ -36,7 +36,7 @@ export default async function Home() {
             src="/logo.svg"
             alt=""
             aria-hidden="true"
-            className="h-12 w-12"
+            className="h-12 w-12 dark:invert"
           />
           <h1 className="font-display text-2xl tracking-[0.2em] uppercase">
             Ghost Hunter
