@@ -32,7 +32,12 @@ export default async function Home() {
           className="flex items-center justify-center gap-2"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="" aria-hidden="true" className="h-8 w-8" />
+          <img
+            src="/logo.svg"
+            alt=""
+            aria-hidden="true"
+            className="h-12 w-12"
+          />
           <h1 className="font-display text-2xl tracking-[0.2em] uppercase">
             Ghost Hunter
           </h1>
