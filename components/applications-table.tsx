@@ -827,12 +827,22 @@ function NewRow({
       } else {
         setError(result.error);
       }
+    } catch {
+      setError("Import failed. Try again or enter manually.");
     } finally {
       setImporting(false);
     }
   }
 
   function submit(formData: FormData) {
+    const company = String(formData.get("companyName") ?? "").trim();
+    const r = String(formData.get("role") ?? "").trim();
+    // Both are required to create. If either is missing, keep the row open so
+    // an in-progress entry (e.g. a pasted URL awaiting import) is never lost.
+    if (!company || !r) {
+      setError(r ? null : company ? "Add a role too." : null);
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const promise = onSubmit(formData);
@@ -862,15 +872,24 @@ function NewRow({
           ref={formRef}
           action={submit}
           onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
-              const fd = new FormData(e.currentTarget);
-              const company = String(fd.get("companyName") ?? "").trim();
-              const r = String(fd.get("role") ?? "").trim();
-              if (!company && !r) {
-                onDone();
-                return;
-              }
+            // Never tear down mid-import — the fields are transiently empty
+            // while the extraction is in flight.
+            if (importing) return;
+            const related = e.relatedTarget as Node | null;
+            if (e.currentTarget.contains(related)) return;
+            const company = companyValue.trim();
+            const r = role.trim();
+            if (company && r) {
+              // Enough to save — commit on the way out.
               formRef.current?.requestSubmit();
+              return;
+            }
+            // Incomplete. Only discard an empty row when focus moved to a real
+            // element outside the form. A null relatedTarget means focus left to
+            // a context menu / browser chrome (e.g. right-click → Paste) — don't
+            // discard there, or a pasted URL would vanish before it's used.
+            if (related && company === "" && r === "" && url.trim() === "") {
+              onDone();
             }
           }}
           onKeyDown={(e) => {
