@@ -31,6 +31,8 @@ Per application: company, role, salary, work mode, job URL, job description, con
 
 A sortable, filterable table backs the dashboard. Search by company or role, narrow by status, edit fields inline. Typing a company name in the new-application form filters the table to existing entries at that company.
 
+Paste a job posting URL into the new-application form and **Import** to autofill it: the server fetches the page and reads its schema.org `JobPosting` metadata (with OpenGraph/heading fallbacks) to pull the company, role, job description, salary, and work mode. The fields prefill the row (company and role stay editable) before you save. No external API or key — it's free; accuracy is best on ATS/career sites that publish structured data, and login-gated or JS-only boards may not be readable.
+
 Each row expands into a detail view with the full field set and an event timeline. Every status change becomes an event with an optional note.
 
 <p align="center">

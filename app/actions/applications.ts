@@ -12,11 +12,20 @@ import {
   updateEvent,
 } from "@/lib/applications";
 import { applicationStatus, interviewFormat, workMode } from "@/lib/db/schema";
+import {
+  extractJobFromUrl,
+  JobImportError,
+  type ExtractedJob,
+} from "@/lib/job-import";
 import { deleteObject } from "@/lib/storage";
 
 const NewApplicationSchema = z.object({
   companyName: z.string().trim().min(1).max(200),
   role: z.string().trim().min(1).max(200),
+  jobUrl: z.string().trim().max(2_000).nullish(),
+  jobDescription: z.string().max(50_000).nullish(),
+  salary: z.string().trim().max(200).nullish(),
+  workMode: z.enum(workMode.enumValues).nullish(),
 });
 
 export type CreateApplicationResult =
@@ -32,6 +41,10 @@ export async function createApplicationAction(
   const parsed = NewApplicationSchema.safeParse({
     companyName: formData.get("companyName"),
     role: formData.get("role"),
+    jobUrl: formData.get("jobUrl") || undefined,
+    jobDescription: formData.get("jobDescription") || undefined,
+    salary: formData.get("salary") || undefined,
+    workMode: formData.get("workMode") || undefined,
   });
   if (!parsed.success) {
     return { ok: false, errors: parsed.error.flatten().fieldErrors };
@@ -40,6 +53,37 @@ export async function createApplicationAction(
   await createApplication(userId, parsed.data);
   revalidatePath("/");
   return { ok: true };
+}
+
+const ImportUrlSchema = z.object({
+  url: z.string().trim().url().max(2_000),
+});
+
+export type ImportJobResult =
+  | { ok: true; data: ExtractedJob }
+  | { ok: false; error: string };
+
+export async function importJobFromUrlAction(
+  url: string,
+): Promise<ImportJobResult> {
+  const { userId } = await auth();
+  if (!userId) throw new Error("unauthenticated");
+
+  const parsed = ImportUrlSchema.safeParse({ url });
+  if (!parsed.success) {
+    return { ok: false, error: "Enter a valid URL." };
+  }
+
+  try {
+    const data = await extractJobFromUrl(parsed.data.url);
+    return { ok: true, data };
+  } catch (err) {
+    if (err instanceof JobImportError) {
+      return { ok: false, error: err.message };
+    }
+    console.error("job import failed", err);
+    return { ok: false, error: "Import failed. Try again or enter manually." };
+  }
 }
 
 const ChangeStatusSchema = z.object({

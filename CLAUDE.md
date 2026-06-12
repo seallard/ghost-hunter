@@ -38,6 +38,7 @@
 - Next.js 16, Tailwind v4, PostgreSQL, Drizzle ORM, shadcn/ui
 - Auth: Clerk (users live in Clerk, not in our DB)
 - Charts: Recharts; reach for Nivo only if a sankey/funnel view is added
+- Job-URL import: "import from URL" on the add form fetches a posting server-side and extracts fields from schema.org `JobPosting` JSON-LD, with OpenGraph/meta + regex fallbacks (`lib/job-import.ts`, parser: `node-html-parser`). No external API or key — free and deterministic.
 - Hosting: Railway (Next.js service + Postgres plugin)
 
 ## Conventions and Invariants
