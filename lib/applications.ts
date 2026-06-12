@@ -65,7 +65,14 @@ export async function getApplicationCountsByDay(
 
 export async function createApplication(
   userId: string,
-  input: { companyName: string; role: string },
+  input: {
+    companyName: string;
+    role: string;
+    jobUrl?: string | null;
+    jobDescription?: string | null;
+    salary?: string | null;
+    workMode?: Application["workMode"];
+  },
 ): Promise<Application> {
   const [row] = await db
     .insert(applications)
@@ -73,6 +80,10 @@ export async function createApplication(
       userId,
       companyName: input.companyName,
       role: input.role,
+      jobUrl: input.jobUrl ?? null,
+      jobDescription: input.jobDescription ?? null,
+      salary: input.salary ?? null,
+      workMode: input.workMode ?? null,
       status: "applied",
     })
     .returning();

@@ -12,7 +12,9 @@ import {
   ArrowUp,
   ChevronRight,
   Ghost,
+  Loader2,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -73,9 +75,11 @@ import {
   createApplicationAction,
   type CreateApplicationResult,
   deleteApplicationAction,
+  importJobFromUrlAction,
   updateApplicationFieldsAction,
   updateEventAction,
 } from "@/app/actions/applications";
+import { WORK_MODE_LABELS } from "@/lib/applications-work-mode";
 
 const COLS = 5;
 
@@ -311,6 +315,12 @@ export function ApplicationsTable({
     const role = String(formData.get("role") ?? "").trim();
     if (companyName && role) {
       const now = new Date();
+      const jobUrl = String(formData.get("jobUrl") ?? "").trim() || null;
+      const jobDescription =
+        String(formData.get("jobDescription") ?? "") || null;
+      const salary = String(formData.get("salary") ?? "").trim() || null;
+      const workModeRaw = String(formData.get("workMode") ?? "").trim();
+      const workMode = (workModeRaw as Application["workMode"]) || null;
       applyAppPatch({
         type: "create",
         app: {
@@ -318,11 +328,11 @@ export function ApplicationsTable({
           userId: "",
           companyName,
           role,
-          jobDescription: null,
-          jobUrl: null,
+          jobDescription,
+          jobUrl,
           status: "applied",
-          workMode: null,
-          salary: null,
+          workMode,
+          salary,
           contact: null,
           coverLetterText: null,
           coverLetterObjectKey: null,
@@ -790,6 +800,38 @@ function NewRow({
   const [, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const [url, setUrl] = useState("");
+  const [role, setRole] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<{
+    jobDescription: string | null;
+    salary: string | null;
+    workMode: Application["workMode"] | null;
+  }>({ jobDescription: null, salary: null, workMode: null });
+
+  async function handleImport() {
+    const trimmed = url.trim();
+    if (!trimmed || importing) return;
+    setError(null);
+    setImporting(true);
+    try {
+      const result = await importJobFromUrlAction(trimmed);
+      if (result.ok) {
+        if (result.data.companyName) onCompanyChange(result.data.companyName);
+        if (result.data.role) setRole(result.data.role);
+        setImported({
+          jobDescription: result.data.jobDescription,
+          salary: result.data.salary,
+          workMode: result.data.workMode,
+        });
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function submit(formData: FormData) {
     setError(null);
     startTransition(async () => {
@@ -807,6 +849,12 @@ function NewRow({
     });
   }
 
+  const captured = [
+    imported.jobDescription ? "description" : null,
+    imported.salary ? "salary" : null,
+    imported.workMode ? WORK_MODE_LABELS[imported.workMode] : null,
+  ].filter((v): v is string => v !== null);
+
   return (
     <TableRow>
       <TableCell colSpan={COLS} className="p-0">
@@ -817,8 +865,8 @@ function NewRow({
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
               const fd = new FormData(e.currentTarget);
               const company = String(fd.get("companyName") ?? "").trim();
-              const role = String(fd.get("role") ?? "").trim();
-              if (!company && !role) {
+              const r = String(fd.get("role") ?? "").trim();
+              if (!company && !r) {
                 onDone();
                 return;
               }
@@ -828,25 +876,84 @@ function NewRow({
           onKeyDown={(e) => {
             if (e.key === "Escape") onDone();
           }}
-          className="flex items-center gap-2 px-2 py-1"
+          className="flex flex-col gap-1.5 px-2 py-1.5"
         >
-          <Input
-            name="companyName"
-            placeholder="Company"
-            autoFocus
-            value={companyValue}
-            onChange={(e) => onCompanyChange(e.currentTarget.value)}
-            className="w-[35%]"
-          />
-          <Input name="role" placeholder="Role" className="w-[30%]" />
-          <span className="w-[15%]">
-            <Badge className={STATUS_CLASSES.applied}>
-              {STATUS_LABELS.applied}
-            </Badge>
-          </span>
-          <span className="text-muted-foreground w-[20%] text-sm">
-            {error ?? "just now"}
-          </span>
+          <div className="flex items-center gap-2">
+            <Input
+              name="jobUrl"
+              type="url"
+              inputMode="url"
+              placeholder="Paste a job posting URL to autofill…"
+              value={url}
+              onChange={(e) => setUrl(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void handleImport();
+                }
+              }}
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleImport}
+              disabled={importing || url.trim() === ""}
+            >
+              {importing ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Sparkles className="size-4" />
+              )}
+              {importing ? "Importing…" : "Import"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              name="companyName"
+              placeholder="Company"
+              autoFocus
+              value={companyValue}
+              onChange={(e) => onCompanyChange(e.currentTarget.value)}
+              className="w-[35%]"
+            />
+            <Input
+              name="role"
+              placeholder="Role"
+              value={role}
+              onChange={(e) => setRole(e.currentTarget.value)}
+              className="w-[30%]"
+            />
+            <span className="w-[15%]">
+              <Badge className={STATUS_CLASSES.applied}>
+                {STATUS_LABELS.applied}
+              </Badge>
+            </span>
+            <span className="text-muted-foreground w-[20%] truncate text-sm">
+              {error ? (
+                <span className="text-destructive">{error}</span>
+              ) : captured.length > 0 ? (
+                <span title={`Captured: ${captured.join(", ")}`}>
+                  + {captured.join(" · ")}
+                </span>
+              ) : (
+                "just now"
+              )}
+            </span>
+          </div>
+          {imported.jobDescription !== null && (
+            <input
+              type="hidden"
+              name="jobDescription"
+              value={imported.jobDescription}
+            />
+          )}
+          {imported.salary !== null && (
+            <input type="hidden" name="salary" value={imported.salary} />
+          )}
+          {imported.workMode !== null && (
+            <input type="hidden" name="workMode" value={imported.workMode} />
+          )}
         </form>
       </TableCell>
     </TableRow>
